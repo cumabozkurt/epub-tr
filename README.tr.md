@@ -1,6 +1,10 @@
 # epub-tr — edebi kalitede EPUB çevirmeni (önce Türkçe)
 
-[English README](README.md) · MIT Lisansı
+[English README](README.md) · [MIT Lisansı](LICENSE) · Python ≥ 3.9
+
+**İçindekiler:** [Özellikler](#özellikler) · [Motorlar](#motorlar) · [Kurulum](#kurulum) · [Hızlı başlangıç](#hızlı-başlangıç) ·
+[Kullanım](#kullanım) · [Yapılandırma](#yapılandırma) · [Mimari](#mimari) · [Sorun giderme](#sorun-giderme) ·
+[Testler](#testler) · [Katkıda bulunma](#katkıda-bulunma) · [Lisans](#lisans)
 
 `epub-tr`, EPUB kitapları **doğal ve edebi bir Türkçeye** çevirir; kitabın yapısını bozmaz:
 HTML biçimlendirmesi, görseller, CSS, yazı tipleri, içindekiler (nav + NCX), üst veriler ve
@@ -32,7 +36,7 @@ kitap içi bağlantılar korunur. Tüm motorlar **ücretsizdir** (ücretli API a
 
 | motor | tür | gereksinim |
 |---|---|---|
-| `opencode` | `opencode run` ile LLM (OpenCode Zen **ücretsiz** modelleri) | `npm i -g opencode-ai` |
+| `opencode` | `opencode run` ile LLM (OpenCode Zen **ücretsiz** modelleri: big-pickle, nemotron-3-ultra-free, mimo-v2.6-flash-free, …) | `npm i -g opencode-ai` |
 | `ollama` | yerel LLM (varsayılan `gemma3:4b`; `aya-expanse:8b` önerilir) | Ollama |
 | `google` | Google Çeviri ücretsiz uç noktaları | – |
 | `bing`, `yandex`, `modernmt` | `translators` paketi (GPL-3, isteğe bağlı) | `pip install translators` |
@@ -46,8 +50,20 @@ kitap içi bağlantılar korunur. Tüm motorlar **ücretsizdir** (ücretli API a
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
-pip install -e '.[argos,extra]'
-npm i -g opencode-ai
+pip install -e .                 # çekirdek
+pip install -e '.[argos,extra]'  # çevrimdışı Argos + Bing/Yandex/ModernMT
+npm i -g opencode-ai             # OpenCode CLI (ücretsiz LLM'ler)
+```
+
+## Hızlı başlangıç
+
+```bash
+git clone https://github.com/cumabozkurt/epub-tr.git && cd epub-tr
+python3 -m venv .venv && . .venv/bin/activate
+pip install -e .
+epub-tr engines --check                                  # bu makinede hangi motorlar çalışıyor?
+epub-tr inspect samples/pg7256.epub --show 10           # neler çevrilecek?
+epub-tr translate samples/pg7256.epub -e google -o magi.tr.epub   # ~2 sn, kurulum gerektirmez
 ```
 
 ## Kullanım
@@ -55,6 +71,9 @@ npm i -g opencode-ai
 ```bash
 # en iyi ücretsiz kalite: OpenCode LLM + redaksiyon, yedek olarak Google
 epub-tr translate kitap.epub -o kitap.tr.epub --engine opencode --polish --fallback google
+
+# OpenCode modelini açıkça seçmek
+epub-tr translate kitap.epub --engine opencode -m opencode/nemotron-3-ultra-free
 
 # yerel ve gizli
 epub-tr translate kitap.epub --engine ollama -m aya-expanse:8b --chunk-chars 1500
@@ -69,6 +88,152 @@ epub-tr engines --check      # hangi motorlar kullanılabilir?
 epub-tr inspect kitap.epub   # neler çevrilecek?
 ```
 
-Not: OpenCode'un ücretsiz katmanı **IP başına** sınırlıdır. Kota dolduğunda (`FreeUsageLimitError`)
-araç hızlıca diğer ücretsiz modelleri ve ardından `--fallback` motorlarını dener; daha sonra yeniden
-çalıştırdığınızda önbellekteki parçalar tekrar çevrilmez.
+Diğer yararlı seçenekler: `--source en` (varsayılan: üst veriden), `--target tr`, `--workers N`,
+`--context 3`, `--retries 3`, `--no-toc`, `--keep-boilerplate` (Project Gutenberg başlık/lisans
+metnini de çevirir; varsayılan olarak atlanır), `--cache YOL`, `--no-cache`, `--stats out.json`,
+`--dump pairs.jsonl`.
+
+## Yapılandırma
+
+### `epub-tr translate` seçenekleri
+
+| seçenek | varsayılan | anlamı |
+|---|---|---|
+| `input` | – | kaynak `.epub` |
+| `-o, --output` | `<girdi>.<hedef>.epub` (`--bilingual` ile `<girdi>.bilingual.<hedef>.epub`) | çıktı yolu |
+| `-e, --engine` | `opencode` | ana motor (bkz. [Motorlar](#motorlar)) |
+| `-m, --model` | motorun varsayılanı | LLM motorları için model (`opencode/big-pickle`, `gemma3:4b`, …) |
+| `--fallback` | – | ana motor başarısız olursa parça başına denenecek motorlar, ör. `google,argos` |
+| `-s, --source` | `dc:language`, yoksa `en` | kaynak dil |
+| `-t, --target` | `tr` | hedef dil |
+| `--bilingual` | kapalı | özgün paragrafı korur, çeviriyi altına ekler |
+| `--polish` | kapalı | ikinci LLM geçişi: edebi gözden geçirme/redaksiyon |
+| `--polish-engine`, `--polish-model` | aynı LLM | redaksiyon geçişinin motoru/modeli |
+| `--dialogue` | `quotes` | diyalog biçimi: `quotes` (“…”) ya da `dash` (— …) |
+| `--glossary` | – | başlangıç sözlüğü (aşağıya bakın) |
+| `-w, --workers` | motorun varsayılanı | paralel işçi sayısı (LLM'de bölümler, MT'de toplu istekler) |
+| `--chunk-chars` | `2500` | LLM isteği başına kaynak karakter |
+| `--context` | `3` | bağlam olarak gönderilen önceki paragraf sayısı |
+| `--retries` | `3` | parça başına yeniden deneme (üstel bekleme) |
+| `--chapters` | tümü | çevrilecek içerik belgeleri, 1'den başlar: `1-3,5` |
+| `--limit` | – | yalnızca ilk N parça (deneme için) |
+| `--no-toc` | kapalı | nav/NCX etiketlerini çevirme |
+| `--keep-boilerplate` | kapalı | Project Gutenberg başlık/lisans metnini de çevir |
+| `--cache` / `--no-cache` | `~/.cache/epub-tr/cache.sqlite3` | SQLite çeviri önbelleği (devam ettirme) |
+| `--stats DOSYA` | – | JSON özet yazar (son sözlük dahil) |
+| `--dump DOSYA` | – | JSONL `{uid, source, translation, engine}` çiftleri yazar |
+| `-q, --quiet` | kapalı | ilerleme çubuğu yok |
+| `-v, --verbose` (genel) | kapalı | INFO günlükleri |
+
+Diğer alt komutlar: `epub-tr engines [--check]`, `epub-tr inspect KİTAP [--show N]`, `epub-tr --version`.
+
+**Çıkış kodu:** seçilen tüm parçalar çevrildiyse `0`, çevrilemeyen parça kaldıysa `2` (bu parçalar özgün dilde
+kalır; daha sonra yeniden çalıştırarak önbellek ve diğer motorlarla tamamlayabilirsiniz). Her çalıştırmada stderr'e
+JSON özet (parça sayısı, motor kullanımı, hatalar, önbellek isabetleri, sözlük boyutu) yazılır.
+
+### Sözlük dosyası
+
+`--glossary` JSON (`{"Della": "Della", "Madame Sofronie": "Madam Sofronie"}`) ya da her satırda bir kayıt olan
+metin dosyası kabul eder; ayraç `=>`, SEKME ya da `=` olabilir; boş satırlar ve `#` yorumları atlanır:
+
+```text
+# adlar.tsv
+Madame Sofronie => Madam Sofronie
+the Magi	Müneccimler
+```
+
+### Ortam değişkenleri
+
+| değişken | kullanan | varsayılan |
+|---|---|---|
+| `EPUB_TR_CACHE` | önbellek yolu | `$XDG_CACHE_HOME/epub-tr/cache.sqlite3` |
+| `EPUB_TR_OPENCODE_MODEL` | opencode | `opencode/big-pickle` |
+| `EPUB_TR_OPENCODE_TIMEOUT` | opencode (çağrı başına saniye) | `600` |
+| `OPENCODE_BIN` | opencode ikili dosyası | `PATH`'teki `opencode`, sonra `~/.opencode/bin/opencode` |
+| `EPUB_TR_OLLAMA_MODEL` | ollama | `gemma3:4b` |
+| `OLLAMA_HOST` | ollama | `http://localhost:11434` |
+| `EPUB_TR_OLLAMA_CTX` / `EPUB_TR_OLLAMA_MAX_TOKENS` / `EPUB_TR_OLLAMA_TIMEOUT` | ollama | `8192` / otomatik / `1800` |
+| `MYMEMORY_EMAIL` | mymemory (günlük kotayı artırır) | – |
+| `LINGVA_URL` | lingva sunucusu | yerleşik genel liste |
+| `LIBRETRANSLATE_URL`, `LIBRETRANSLATE_API_KEY` | libretranslate | `http://localhost:5000` |
+| `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `MISTRAL_API_KEY`, `OPENAI_API_KEY` | API hazır ayarları | – |
+| `EPUB_TR_<AYAR>_MODEL`, `EPUB_TR_<AYAR>_BASE_URL`, `OPENAI_BASE_URL` | hazır ayarın modelini/adresini değiştirir | bkz. `epub_tr/engines/llm.py` |
+
+## Mimari
+
+```text
+kitap.epub ─► epub_io.Book (ebooklib + lxml) ── belgeler, spine, OPF, nav, NCX
+                 │  blocks.py: her blok öğe → Segment, satır içi biçim → <g1>…</g1>/<x2/> yer tutucuları
+                 ▼
+          pipeline.Translator
+            ├─ MT motorları:  toplu parçalar, iş parçacığı havuzu
+            └─ LLM motorları: <seg id=…> parçaları (--chunk-chars) + bağlam penceresi + yürüyen sözlük
+                              + Türkçe edebi istem (prompts.py) → isteğe bağlı --polish geçişi
+            ├─ cache.py: motor+model+aşama+diller+metin anahtarlı SQLite önbellek; kitap başına sözlük
+            └─ parça başına yedek motor zinciri, yeniden deneme, kota sınırı tespiti
+                 ▼
+          Book.apply() öğeleri tüm öznitelikleriyle yeniden kurar (esnek geri dönüş bağlantıları korur)
+          Book.write() özgün ZIP'i bayt bayt kopyalar; yalnızca XHTML, OPF, nav, NCX değişir ─► kitap.tr.epub
+```
+
+| modül | görevi |
+|---|---|
+| `epub_tr/cli.py` | komut satırı, motor/yedek kurulumu, özet/istatistik/döküm |
+| `epub_tr/epub_io.py` | EPUB okuma (parçalar, içindekiler, Gutenberg metni tespiti) ve ZIP düzeyinde yazma |
+| `epub_tr/blocks.py` | XHTML blok ⇄ yer tutuculu metin dönüşümü |
+| `epub_tr/pipeline.py` | parçalama, bağlam, sözlük, ad tespiti, redaksiyon, eşzamanlılık, yedek, içindekiler uyumu |
+| `epub_tr/prompts.py` | sistem/kullanıcı istemleri (Türkçe edebi kurallar, diyalog biçimi) |
+| `epub_tr/cache.py` | SQLite önbellek (WAL, kilit için yeniden deneme) |
+| `epub_tr/engines/` | `base.py` arayüz, `llm.py` (OpenCode, Ollama, OpenAI uyumlu), `mt.py` (Google, translators, MyMemory, Lingva, LibreTranslate, Argos) |
+| `scripts/` | `compare.py` (motorları yan yana karşılaştırma), `run_ollama.sh`, `opencode_when_available.sh` (OpenCode kotası açılınca çalıştırır) |
+| `samples/`, `out/` | Project Gutenberg deneme kitapları ve `TEST_REPORT.md`'deki çıktılar |
+
+**Yeni motor eklemek:** `epub_tr.engines.base.Engine` sınıfından türetin; `translate_one()` (MT ya da
+`translate_batch()`) veya `complete(system, user)` (LLM, `is_llm = True`) ve `EngineUnavailable` fırlatan
+`check()` yazın, ardından `epub_tr/engines/__init__.py` içindeki `ENGINES` sözlüğüne kaydedin.
+
+## OpenCode ücretsiz modelleri hakkında
+
+`opencode run`, araçsız bir `epubtr` ajanı tanımlayan, otomatik üretilmiş bir `opencode.json` ile özel bir
+dizinde çalıştırılır (`--pure`, ek başlık isteğini önlemek için `--title`, sağlam ayrıştırma için `--format json`).
+Zen ücretsiz katmanı **IP başına** sınırlıdır. Kota dolduğunda (`FreeUsageLimitError`, birkaç saatlik `retry-after`)
+araç hızlıca diğer ücretsiz modelleri ve ardından `--fallback` motorlarını dener; daha sonra yeniden çalıştırdığınızda
+önbellekteki parçalar tekrar çevrilmez.
+
+## Sorun giderme
+
+| belirti | neden / çözüm |
+|---|---|
+| `[warn] engine opencode unavailable` | CLI'yi kurun (`npm i -g opencode-ai`) ya da `OPENCODE_BIN` ile yolunu verin |
+| OpenCode: `FreeUsageLimitError` / HTTP 429 | ücretsiz katman IP başına saatlerce sınırlanır. `--fallback google` kullanın ve sonra yeniden çalıştırın; önbellek korunur. `scripts/opencode_when_available.sh` kotayı bekleyebilir. |
+| `ollama not running at http://localhost:11434` | `ollama serve` ve `ollama pull gemma3:4b` (ya da `OLLAMA_HOST`) |
+| Ollama çok yavaş / döngüye giriyor | daha küçük `--chunk-chars` (ör. 1500), daha küçük model ya da `EPUB_TR_OLLAMA_MAX_TOKENS` |
+| `bing`/`yandex`/`modernmt` kullanılamıyor | `pip install -e '.[extra]'` (`translators`, GPL-3) |
+| `argos` kullanılamıyor | `pip install -e '.[argos]'`; en→tr modeli ilk kullanımda iner |
+| `mymemory` kota uyarısı veriyor | IP başına anonim kota bitti; `MYMEMORY_EMAIL` verin ya da motor değiştirin |
+| çıkış kodu `2` | bazı parçalar çevrilemedi; özetteki `errors` alanına bakıp yeniden çalıştırın |
+| bazı paragraflarda biçim kayboldu | özetteki `markup_fallbacks` esnek kurulan paragrafları sayar (metin ve bağlantılar korunur, satır içi biçim düşer); yer tutuculara uyan LLM'ler (ya da `google`) bunu önler |
+| sıfırdan çeviri istiyorum | `--no-cache` ya da `--cache` ile yeni bir dosya |
+| Gutenberg başlığı çevrilmedi | bilinçli; `--keep-boilerplate` ekleyin |
+
+## Testler
+
+```bash
+pip install pytest && python -m pytest -q
+```
+
+Ayrıca bkz. `RESEARCH.md` (15 popüler açık kaynak çevirmen incelemesi) ve `TEST_REPORT.md`.
+
+## Katkıda bulunma
+
+Hata bildirimleri ve çekme istekleri memnuniyetle karşılanır:
+
+1. bir sanal ortam oluşturup `pip install -e '.[dev]'` çalıştırın;
+2. değişiklikleri odaklı tutun ve `tests/` altına test ekleyin (`echo` motoru ağ olmadan yapı testi sağlar);
+3. PR açmadan önce `python -m pytest -q` çalıştırın;
+4. istemleri değiştirirseniz önce/sonra örneği ekleyin (ör. `scripts/compare.py` ile).
+
+## Lisans
+
+[MIT](LICENSE) © Cuma Bozkurt. İsteğe bağlı `translators` paketi (Bing/Yandex/ModernMT) GPL-3 lisanslıdır ve
+zorunlu bağımlılık değildir. `samples/` altındaki kitaplar kamu malı Project Gutenberg metinleridir.
