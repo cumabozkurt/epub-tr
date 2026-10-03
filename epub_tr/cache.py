@@ -24,8 +24,14 @@ class Cache:
         self.hits = 0
         self.misses = 0
         if enabled:
-            self.db = sqlite3.connect(self.path, check_same_thread=False, timeout=30)
-            self.db.execute("PRAGMA journal_mode=WAL")
+            self.db = sqlite3.connect(self.path, check_same_thread=False, timeout=60)
+            self.db.execute("PRAGMA busy_timeout=60000")
+            for attempt in range(20):  # several processes may open the cache at once
+                try:
+                    self.db.execute("PRAGMA journal_mode=WAL")
+                    break
+                except sqlite3.OperationalError:
+                    time.sleep(0.5 + attempt * 0.2)
             self.db.execute(
                 "CREATE TABLE IF NOT EXISTS tr (key TEXT PRIMARY KEY, engine TEXT, model TEXT, stage TEXT,"
                 " src TEXT, tgt TEXT, source TEXT, result TEXT, created REAL)")

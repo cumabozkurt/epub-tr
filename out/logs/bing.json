@@ -1,0 +1,21 @@
+{
+  "output": "out/magi.bing.tr.epub",
+  "seconds": 42.8,
+  "segments": 51,
+  "chars": 11237,
+  "translated": 51,
+  "untranslated": 0,
+  "markup_fallbacks": 0,
+  "engine_segments": {
+    "bing": 51
+  },
+  "engine_calls": {
+    "bing": 13
+  },
+  "failures": {},
+  "polished_segments": 0,
+  "cache_hits": 0,
+  "glossary_size": 0,
+  "errors": [],
+  "glossary": {}
+}

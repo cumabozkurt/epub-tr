@@ -128,6 +128,7 @@ def cmd_translate(a):
     summary = {
         "output": out, "seconds": round(dt, 1), "segments": total, "chars": chars,
         "translated": applied["applied"], "untranslated": applied["untranslated"],
+        "selected_missing": sum(1 for d in docs_segments for s in d if not s.translation),
         "markup_fallbacks": applied["lenient"], "engine_segments": dict(stats.engine_segments),
         "engine_calls": dict(stats.calls), "failures": dict(stats.failures), "polished_segments": stats.polished,
         "cache_hits": cache.hits, "glossary_size": len(tr.glossary), "errors": stats.errors[:10],
@@ -142,7 +143,8 @@ def cmd_translate(a):
                 for s in d:
                     f.write(json.dumps({"uid": s.uid, "source": s.source, "translation": s.translation,
                                         "engine": s.engine}, ensure_ascii=False) + "\n")
-    return 0 if applied["untranslated"] == 0 else 2
+    missing = sum(1 for d in docs_segments for s in d if not s.translation)
+    return 0 if missing == 0 else 2
 
 
 def cmd_engines(a):
