@@ -1,4 +1,3 @@
-Book: 'The Gift of the Magi' by O. Henry | 2 content docs | 51 segments, 11237 chars | engines: ['ollama/gemma3:4b']
 {
   "output": "out/magi.ollama-gemma3.tr.epub",
   "seconds": 481.4,
@@ -18,5 +17,12 @@ Book: 'The Gift of the Magi' by O. Henry | 2 content docs | 51 segments, 11237 c
   "polished_segments": 0,
   "cache_hits": 3,
   "glossary_size": 5,
-  "errors": []
+  "errors": [],
+  "glossary": {
+    "Della": "Della",
+    "Dillingham": "Dillingham",
+    "Young": "Young",
+    "Hediyenin Getirdiği Mutluluk": "The Gift of the Magi",
+    "GUTENBERG™ TAM METİN FİLMİ İZİN VERME SÜRESİ": "THE FULL PROJECT GUTENBERG™ LICENSE"
+  }
 }

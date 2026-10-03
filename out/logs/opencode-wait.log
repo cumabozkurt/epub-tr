@@ -1,0 +1,28 @@
+2026-10-03 22:42:03 probe 1
+Book: 'The Gift of the Magi' by O. Henry | 2 content docs | 2 segments, 31 chars | engines: ['opencode/opencode/big-pickle']
+WARNING engine opencode failed for 2 segments: opencode failed after 1 attempts: opencode opencode/nemotron-3.5-lightning-free: Rate limit exceeded
+ERROR all engines failed for unit starting 1:1: opencode failed after 1 attempts: opencode opencode/nemotron-3.5-lightning-free: Rate limit exceeded
+{
+  "output": "/tmp/oc_probe.epub",
+  "seconds": 83.2,
+  "segments": 2,
+  "chars": 31,
+  "translated": 0,
+  "untranslated": 47,
+  "selected_missing": 2,
+  "markup_fallbacks": 0,
+  "engine_segments": {},
+  "engine_calls": {
+    "opencode": 1
+  },
+  "failures": {
+    "opencode": 2
+  },
+  "polished_segments": 0,
+  "cache_hits": 0,
+  "glossary_size": 0,
+  "errors": [
+    "opencode: opencode opencode/nemotron-3.5-lightning-free: Rate limit exceeded",
+    "opencode: unit failed: opencode failed after 1 attempts: opencode opencode/nemotron-3.5-lightning-free: Rate limit exceeded"
+  ]
+}

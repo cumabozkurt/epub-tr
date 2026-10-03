@@ -1,20 +1,19 @@
 {
   "output": "out/magi.argos.tr.epub",
-  "seconds": 820.1,
+  "seconds": 2.2,
   "segments": 51,
   "chars": 11237,
   "translated": 51,
   "untranslated": 0,
-  "markup_fallbacks": 2,
+  "selected_missing": 0,
+  "markup_fallbacks": 0,
   "engine_segments": {
-    "argos": 51
+    "argos (cache)": 51
   },
-  "engine_calls": {
-    "argos": 4
-  },
+  "engine_calls": {},
   "failures": {},
   "polished_segments": 0,
-  "cache_hits": 0,
+  "cache_hits": 51,
   "glossary_size": 0,
   "errors": [],
   "glossary": {}

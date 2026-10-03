@@ -9,12 +9,13 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from . import prompts
-from .blocks import TagMismatch, validate
+from .blocks import TOKEN_RE, TagMismatch, validate
 from .engines.base import Engine, EngineError, EngineUnavailable, RateLimited
 
 log = logging.getLogger("epub_tr")
 
 SEG_RE = re.compile(r'<seg\s+id\s*=\s*"?(\d+)"?\s*>(.*?)</seg\s*>', re.S | re.I)
+OUTER_RE = re.compile(r"<g(\d+)>(.*)</g\1>", re.S)
 GLOSS_RE = re.compile(r"<glossary>(.*?)(?:</glossary>|$)", re.S | re.I)
 NAME_RE = re.compile(r"\b([A-Z][a-z]+(?:[A-Z][a-z]+)?)\b")
 COMMON_CAPS = {"The", "And", "But", "For", "She", "His", "Her", "They", "There", "Then", "When", "What", "Which",
@@ -132,6 +133,7 @@ class Translator:
             self._run_llm(docs_segments)
         else:
             self._run_mt(all_segs)
+        harmonize_toc(all_segs)
         if self.cache:
             self.cache.save_glossary(self.book_id, self.glossary)
         return self.stats
@@ -142,7 +144,7 @@ class Translator:
         for s in segs:
             r = self._cache_get(self.primary, s)
             if r is not None:
-                s.translation, s.engine = r, self.primary.name
+                s.translation, s.engine = self._rewrap(self.primary, s, r), self.primary.name
                 self.stats.engine_segments[self.primary.name + " (cache)"] += 1
                 self._tick(1)
             else:
@@ -166,7 +168,26 @@ class Translator:
         res = self._call_with_retries(engine, lambda: engine.translate_batch(texts))
         if len(res) != len(segs):
             raise EngineError("result count mismatch")
-        return res
+        return [self._rewrap(engine, s, r) for s, r in zip(segs, res)]
+
+    @staticmethod
+    def _rewrap(engine, seg, r):
+        """Tag-less engines: re-wrap segments whose whole content is one inline element
+        (e.g. <a id=..>Title</a> in a TOC) so links/anchors keep their text."""
+        if not r:
+            return r
+        # LLMs like to wrap short titles in quotes the source does not have
+        q = '"“”«»'
+        src_plain = seg.enc.plain()
+        rr = r.strip()
+        if len(rr) > 2 and rr[0] in q and rr[-1] in q and src_plain[:1] not in q and rr.count('"') + rr.count('“') + rr.count('”') == 2:
+            r = rr[1:-1].strip()
+        if TOKEN_RE.search(r):
+            return r
+        m = OUTER_RE.fullmatch(seg.source)
+        if m and "<" not in m.group(2):
+            return f"<g{m.group(1)}>{r}</g{m.group(1)}>"
+        return r
 
     # ------------------------------------------------------------ unit with fallback chain
     def _unit(self, segs, ctx):
@@ -187,6 +208,7 @@ class Translator:
                 for s, r in zip(segs, res):
                     if r is None:
                         continue
+                    r = self._rewrap(engine, s, r)
                     s.translation, s.engine = r, engine.name
                     self._cache_put(engine, s, r)
                     if s.enc.has_tags:
@@ -233,7 +255,7 @@ class Translator:
             cached = [self._cache_get(self.primary, s) for s in chunk]
             if all(c is not None for c in cached):
                 for s, c in zip(chunk, cached):
-                    s.translation, s.engine = c, self.primary.name
+                    s.translation, s.engine = self._rewrap(self.primary, s, c), self.primary.name
                 self.stats.engine_segments[self.primary.name + " (cache)"] += len(chunk)
                 self._tick(len(chunk))
             else:
@@ -331,3 +353,20 @@ class Translator:
                 k, v = [x.strip(" -*•\t\"'") for x in line.split("=>", 1)]
                 if k and v and len(k) < 60 and len(v) < 80 and k not in self.glossary:
                     self.glossary[k] = v
+
+
+def harmonize_toc(segs):
+    """Make TOC / nav labels identical to the translated chapter headings they point to."""
+    heads = {}
+    for s in segs:
+        if s.kind == "heading" and s.translation:
+            heads.setdefault(s.enc.plain().strip().lower(), TOKEN_RE.sub("", s.translation).strip())
+    for s in segs:
+        if s.kind != "toc" and not (s.doc is not None and s.doc.is_nav):
+            continue
+        t = heads.get(s.enc.plain().strip().lower())
+        if not t:
+            continue
+        m = OUTER_RE.fullmatch(s.source)
+        s.translation = f"<g{m.group(1)}>{t}</g{m.group(1)}>" if (m and "<" not in m.group(2)) else (
+            t if not s.enc.has_tags else s.translation)
