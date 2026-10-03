@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "epub-tr"
-version = "0.1.0"
+version = "1.0.0"
 description = "Literary-quality EPUB translator focused on Turkish, with free engines (OpenCode, Google, Argos, Ollama, ...)"
 readme = "README.md"
 license = {text = "MIT"}
