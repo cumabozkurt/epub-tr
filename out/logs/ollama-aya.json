@@ -1,21 +1,22 @@
 {
   "output": "out/magi.ollama-aya.tr.epub",
-  "seconds": 221.1,
-  "segments": 16,
-  "chars": 4185,
-  "translated": 16,
-  "untranslated": 31,
+  "seconds": 424.4,
+  "segments": 51,
+  "chars": 11237,
+  "translated": 51,
+  "untranslated": 0,
   "selected_missing": 0,
   "markup_fallbacks": 0,
   "engine_segments": {
-    "ollama": 16
+    "ollama (cache)": 14,
+    "ollama": 37
   },
   "engine_calls": {
-    "ollama": 5
+    "ollama": 9
   },
   "failures": {},
   "polished_segments": 0,
-  "cache_hits": 0,
+  "cache_hits": 17,
   "glossary_size": 7,
   "errors": [],
   "glossary": {
