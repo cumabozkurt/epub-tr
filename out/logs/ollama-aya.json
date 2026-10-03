@@ -1,0 +1,30 @@
+{
+  "output": "out/magi.ollama-aya.tr.epub",
+  "seconds": 221.1,
+  "segments": 16,
+  "chars": 4185,
+  "translated": 16,
+  "untranslated": 31,
+  "selected_missing": 0,
+  "markup_fallbacks": 0,
+  "engine_segments": {
+    "ollama": 16
+  },
+  "engine_calls": {
+    "ollama": 5
+  },
+  "failures": {},
+  "polished_segments": 0,
+  "cache_hits": 0,
+  "glossary_size": 7,
+  "errors": [],
+  "glossary": {
+    "Della": "Della",
+    "Dillingham": "Dillingham",
+    "GUTENBERG™ TAM METİN FİLMİ İZİN VERME SÜRESİ": "THE FULL PROJECT GUTENBERG™ LICENSE",
+    "Hediyenin Getirdiği Mutluluk": "The Gift of the Magi",
+    "Jim": "Jim",
+    "Mme. Sofronie. Hair Goods of All Kinds.": "Mme. Sofronie. Hair Goods of All Kinds.",
+    "Young": "Young"
+  }
+}

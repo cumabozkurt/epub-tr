@@ -1,1 +1,22 @@
 Book: 'The Gift of the Magi' by O. Henry | 2 content docs | 51 segments, 11237 chars | engines: ['ollama/gemma3:4b']
+{
+  "output": "out/magi.ollama-gemma3-polish.tr.epub",
+  "seconds": 719.7,
+  "segments": 51,
+  "chars": 11237,
+  "translated": 51,
+  "untranslated": 0,
+  "selected_missing": 0,
+  "markup_fallbacks": 2,
+  "engine_segments": {
+    "ollama": 51
+  },
+  "engine_calls": {
+    "ollama": 26
+  },
+  "failures": {},
+  "polished_segments": 50,
+  "cache_hits": 1,
+  "glossary_size": 7,
+  "errors": []
+}

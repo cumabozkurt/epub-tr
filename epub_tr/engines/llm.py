@@ -26,6 +26,8 @@ OPENCODE_FREE_MODELS = [
     "opencode/space-bunny-free",
     "opencode/ling-3.0-flash-fin-free",
     "opencode/nemotron-3.5-lightning-free",
+    "opencode/ling-3.1-flash-free",
+    "opencode/fledge-alpha-free",
 ]
 
 
