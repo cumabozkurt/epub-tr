@@ -1,0 +1,23 @@
+name: Links
+
+on:
+  push:
+    branches: [main]
+    paths: ["**.md", "scripts/check_links.py", ".github/workflows/links.yml"]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    name: External and relative links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: python scripts/check_links.py

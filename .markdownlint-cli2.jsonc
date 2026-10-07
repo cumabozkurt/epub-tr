@@ -1,0 +1,18 @@
+{
+  // Pure style rules are off (long prose lines, inline HTML for the header, table pipe alignment,
+  // bold lead-ins); the rest is rendering hygiene.
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD033": false,
+    "MD041": false,
+    "MD060": false,
+    "MD036": false,
+    "MD024": { "siblings_only": true },
+    // the glossary example shows a literal TAB separator
+    "MD010": { "code_blocks": false }
+  },
+  "globs": ["**/*.md"],
+  // out/ holds generated test-run comparisons
+  "ignores": [".venv/**", "out/**", "build/**", "dist/**", "*.egg-info/**", ".pytest_cache/**"]
+}

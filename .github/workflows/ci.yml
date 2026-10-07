@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  lint:
+    name: Lint (ruff, codespell, markdownlint, relative links)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --upgrade pip ruff codespell
+      - name: ruff
+        run: ruff check --output-format=github .
+      - name: codespell
+        run: codespell
+      - name: markdownlint
+        run: npx --yes markdownlint-cli2@0.23.3
+      - name: Relative links and anchors exist
+        run: python scripts/check_links.py --offline
+      - name: Release notes build for the current version
+        run: python scripts/release_notes.py > /dev/null
+
+  test:
+    name: Tests · ${{ matrix.os }} · Python ${{ matrix.python }}
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev]"
+      - name: pytest (no network)
+        run: python -m pytest -q -m "not network" --cov --cov-report=term --cov-report=xml
+      - name: CLI smoke test
+        shell: bash
+        run: |
+          epub-tr --version
+          epub-tr engines
+          epub-tr inspect samples/pg7256.epub --show 3
+          epub-tr translate samples/pg7256.epub -e echo -o out-smoke.epub --no-cache -q
+
+  package:
+    name: Build sdist + wheel, install and run
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --upgrade pip build twine
+      - run: python -m build
+      - run: python -m twine check --strict dist/*
+      - name: Version in package matches pyproject and __init__
+        run: |
+          v=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          grep -q "__version__ = \"$v\"" epub_tr/__init__.py
+          ls dist/epub_tr-$v-py3-none-any.whl dist/epub_tr-$v.tar.gz
+      - name: Wheel installs in a clean venv and translates offline
+        run: |
+          python -m venv /tmp/v && /tmp/v/bin/pip install dist/*.whl
+          cd /tmp && /tmp/v/bin/epub-tr translate "$GITHUB_WORKSPACE/samples/pg7256.epub" -e echo -o /tmp/o.epub --no-cache -q
+          /tmp/v/bin/epub-tr --version
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  epubcheck:
+    name: EPUBCheck – outputs add no errors
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install EPUBCheck 5.4.0
+        run: |
+          curl -fsSL -o /tmp/epubcheck.zip https://github.com/w3c/epubcheck/releases/download/v5.4.0/epubcheck-5.4.0.zip
+          unzip -q /tmp/epubcheck.zip -d /tmp
+          echo "EPUBCHECK_JAR=/tmp/epubcheck-5.4.0/epubcheck.jar" >> "$GITHUB_ENV"
+      - run: python -m pip install -e .
+      - run: python scripts/validate_epub.py
