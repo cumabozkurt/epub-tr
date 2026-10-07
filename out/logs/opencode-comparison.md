@@ -1,90 +1,7 @@
-# epub-tr test report (2026-10-03, OpenCode run 2026-10-05, TRT)
-
-Türkçe özet: [TEST_REPORT.tr.md](TEST_REPORT.tr.md)
-
-**Test book:** O. Henry, *The Gift of the Magi*, Project Gutenberg #7256 (EPUB3, `samples/pg7256.epub`):
-51 translatable segments, 11,237 chars (the story, title, TOC/NCX labels; the Gutenberg header/licence
-is skipped on purpose). For a second structural check, *The Yellow Wallpaper* (#1952, 273 segments)
-went through Google as well.
-**Box:** 8 vCPU, 16 GB RAM, no GPU. Several engines ran **at the same time**, so CPU-bound timings
-(Argos, Ollama) are pessimistic.
-
-## Results per engine
-
-| Engine | Status | Scope | Time | Notes |
-|---|---|---|---|---|
-| **opencode** draft (`opencode/space-bunny-free`) | ✅ (2026-10-05) | 45/51 segments | 3,730 s | The first five free models were rate-limited (about 2 s each), so the engine switched to `space-bunny-free`, which did all the work. About 290 s per call; 6 segments failed (empty output, 600 s timeouts). See [OpenCode run](#opencode-run-2026-10-05). |
-| **opencode `--polish`** (same model) | ✅ (2026-10-05) | 43/51 translated, 31 polished | 6,932 s | **best literary Turkish of all engines** |
-| **opencode `--polish --bilingual`** (resume) | ✅ (2026-10-05) | 51/51 (43 from the cache, 8 new, 5 newly polished) | 2,568 s | shows that rerunning fills the gaps |
-| google (free endpoint) | ✅ | full book | **1.7 s** | Placeholder tags kept. deep-translator's endpoint was captcha-blocked from this IP, so the `clients5` endpoint was used. |
-| bing (`translators`) | ✅ | full book | 42.8 s | most fluent MT |
-| yandex (`translators`) | ✅ | full book | 17.6 s | |
-| modernmt (`translators`) | ✅ | full book | 16.0 s | puts stray spaces before punctuation (`sevgilim ,`) |
-| argos (offline) | ✅ | full book | 820 s (CPU contention) | weakest quality; plain text only (inline tags dropped, single-element TOC links re-wrapped) |
-| ollama gemma3:4b | ✅ | full book | 481 s | 2 TOC placeholders dropped, then repaired by re-wrap and TOC harmonisation |
-| ollama gemma3:4b + `--polish` | ✅ | full book | 720 s | 50 segments polished |
-| ollama aya-expanse:8b | ✅ | first 16 segments (221 s); a full-book run was started afterwards | 221 s / 16 seg | |
-| lingva (public) | ❌ | – | 147 s | lingva.ml returns HTTP 500, or the source untranslated (upstream Google blocks it); other instances are 404/403 |
-| mymemory | ❌ | – | – | the anonymous daily quota for this IP was already used up ("NEXT AVAILABLE IN 13 HOURS"); setting `MYMEMORY_EMAIL` would help |
-| libretranslate | ⏭ | – | – | libretranslate.com now needs an API key and the public mirrors are dead; works with a self-hosted server (`LIBRETRANSLATE_URL`) |
-| openrouter / gemini / groq / mistral / openai | ⏭ | – | – | no API key in the environment (documented only) |
-| fallback chain `lingva → google` | ✅ | full book | 35 s | lingva failed and all 51 segments were done by google |
-| resume / cache | ✅ | – | 0.7 s | rerunning bing took 51/51 segments from the cache |
-
-## EPUB validation (EPUBCheck 5.4.0)
-
-The **source** EPUB already has 1 error: Gutenberg's `<nav aria-label=…>` in `toc.xhtml` (RSC-005).
-**Every output EPUB, monolingual and bilingual, has exactly that one inherited error and nothing new.**
-That holds for google, bing, yandex, modernmt, argos, gemma3, gemma3-polish, aya, the fallback run,
-bing-bilingual, Yellow Wallpaper (the source has 1 error, the output has 1), and the three OpenCode outputs
-(`magi.opencode.tr.epub`, `magi.opencode-polish.tr.epub`, `magi.opencode-polish.bilingual.epub`; see
-[`out/logs/opencode-epubcheck.log`](out/logs/opencode-epubcheck.log)).
-Bugs found and fixed during testing:
-
-- Bilingual nav created duplicate IDs. Nav is now translated in place.
-- Tag-less engines (Argos) and LLMs that drop placeholders left TOC `<a>` elements empty. Single-element segments are now re-wrapped, and TOC labels are harmonised with the translated chapter headings.
-- OpenCode `$PWD` bug.
-- Ollama output is now capped (`num_predict`) because gemma once looped for more than 8 minutes.
-- SQLite lock when several runs start at once.
-- (v1.1.0, from the test suite) duplicate IDs from inline anchors in bilingual mode, words merged across
-  `<br/>` in plain text, MyMemory recursing forever on one sentence over 500 bytes, Windows encoding of the
-  OpenCode config, and console encoding crashes.
-- (v1.1.0, from the OpenCode run) reversed or invented glossary entries were accepted; OpenCode stayed on a
-  model that kept returning empty output.
-
-## OpenCode run (2026-10-05)
-
-`scripts/opencode_when_available.sh` polled the free tier until a model answered (probe 14 at 11:02 TRT),
-then ran draft, polish and bilingual passes from 11:08 to 14:48 TRT. The logs are in
-[`out/logs/opencode.log`](out/logs/opencode.log), [`opencode-polish.log`](out/logs/opencode-polish.log),
-[`opencode-bilingual.log`](out/logs/opencode-bilingual.log) and the matching `.json`/`.jsonl` files.
-
-- **Model.** The run requested `opencode/big-pickle`. `big-pickle`, `nemotron-3-ultra-free`,
-  `longcat-2.5-preview-free`, `mimo-v2.6-flash-free` and `muse-spark-1.3-contributor-free` all answered
-  `Rate limit exceeded` within about 2 s, and the engine moved on to **`opencode/space-bunny-free`**.
-  OpenCode's session database confirms that every completed answer in the run (34 of them)
-  came from `space-bunny-free`. The log header still shows the requested model; since v1.1.0 the
-  summary has an `engine_models` field with the model actually used.
-- **Speed.** About 290 s per call on average, with 600 s timeouts. The free tier is usable for a short
-  story, but a novel needs patience: run with `--fallback` and rerun later.
-- **Reliability.** Failures were empty answers (exit 0) and timeouts; one `database is locked` came from
-  OpenCode's own database when two workers ran at once. Since v1.1.0 an empty answer moves on to the
-  next free model.
-- **Glossary.** The model reported some reversed or useless pairs
-  (`Hediyenin Getirdiği Mutluluk => The Gift of the Magi`, `Young => Young`). Since v1.1.0 an entry is kept
-  only if its source term occurs in the text.
-- **EPUBCheck.** Every output has only the inherited RSC-005 error.
-
-Every output passes `ebooklib` re-reading. `dc:language` is set to `tr`, the title is translated, and the ZIP entry list is identical to the source (unit test).
-
-## Sample comparisons
-
-### Segment 2:0
+#### Segment 2:0
 
 **Original (EN):** One dollar and eighty-seven cents. That was all. And sixty cents of it was in pennies. Pennies saved one and two at a time by bulldozing the grocer and the vegetable man and the butcher until one’s cheeks burned with the silent imputation of parsimony that such close dealing implied. Three times Della counted it. One dollar and eighty-seven cents. And the next day would be Christmas.
 
-- **opencode-polish**: Bir dolar seksen yedi sent. Hepsi buydu. Altmış sentlik kısmı da kuruşlardan oluşuyordu. Birer ikişer kuruş biriktirmek için bakkala, manava ve kasaba gözünü karartıyordu; bu kadar sıkı pazarlığın sessizce ima ettiği cimrilik ithamı yanaklarını yakıyordu. Della parayı üç kez saydı. Bir dolar seksen yedi sent. Ertesi gün Noel olacaktı.
-- **opencode**: *(not translated: the chunk failed 3 times with empty output; filled on the bilingual resume)*
 - **argos**: Bir bir dolar ve sekizi yedi sent. Hepsi buydu. Ve 60 senti pennies'teydi. Pennies bir ve iki kez marketi ve sebze adamını kırarak kurtardı ve ancak biri yanakları, bu kadar yakın bir şekilde ifade eden parsimony'nin sessiz engeli ile yakıldı. Üç kez Della bunu saydı. Bir dolar ve sekiz yedi sent. Ve ertesi gün Noel olacaktı.
 - **bing**: Bir dolar seksen yedi cent. Hepsi bu kadar. Ve bunun altmış centi bozuk paraydı. Bozuk paralar, marketçiyle, sebzeciyle ve kasapla pazarlık yaparken yanakları, böylesine sıkı hesap yapmanın ima ettiği sessiz tutumluluk suçlamasıyla yanana kadar birer birer ve ikişer ikişer biriktirilmişti. Della bunu üç kez saydı. Bir dolar seksen yedi cent. Ve ertesi gün Noel olacaktı.
 - **google**: Bir dolar seksen yedi sent. Hepsi bu kadar. Ve bunun altmış senti peni cinsindendi. Pennies, bakkal, manav ve kasap gibi yakın ilişkilerin ima ettiği sessiz cimrilik suçlamasıyla yanakları yanana kadar buldozerlerle ezerek birer birer ve iki kişiyi kurtardı. Della bunu üç kez saydı. Bir dolar seksen yedi sent. Ve ertesi gün Noel olacaktı.
@@ -92,81 +9,50 @@ Every output passes `ebooklib` re-reading. `dc:language` is set to `tr`, the tit
 - **ollama-aya**: Bir dolar ve otuz yedi sent. İşte hepsi bu. On altı senti de kuruşlarda. Kuruşlar, marketçiyi, sebze satıcısını ve kasapları ezerken bir kişinin yanakları parsimlilik suçlamasıyla yanarak bir zaman bir iki kuruş tasarruf etti. Della üç kez bunu saydı. Bir dolar ve otuz yedi sent. Ve ertesi gün Noel olacaktı.
 - **ollama-gemma3-polish**: Bir dolar seksen yedi sentti. İşte bütün melekse o kadar. Ve bu melekse’nin elli altı santimi para baytasıydı. Baytaları, kasabayı, sebze adamını ve etçiyi ezerek, yüzlerimizden sessizce cimrilik ima eden yakın sözleşmelerin getirdiği gibi, birer birer birleştirilmişti. Della üç kez saydı. Bir dolar seksen yedi sentti. Ve ertesi gün Noel’i olacaktı.
 - **ollama-gemma3**: Bir dolar seksen yedi kuruş. İşte o kadar. Ve on buçuk kuruşu da altındanlardı. Zincirleme bir şekilde, kasabeyi, sebze satıcısını ve etçiyi, yüzlerimizi paranın hiddetiyle yakarak, böyle yakın bir ticaretin ima ettiği cimrilik ile... Üç defa Della saydı. Bir dolar seksen yedi kuruş. Ve ertesi gün Noel’di.
+- **opencode-polish**: Bir dolar seksen yedi sent. Hepsi buydu. Altmış sentlik kısmı da kuruşlardan oluşuyordu. Birer ikişer kuruş biriktirmek için bakkala, manava ve kasaba gözünü karartıyordu; bu kadar sıkı pazarlığın sessizce ima ettiği cimrilik ithamı yanaklarını yakıyordu. Della parayı üç kez saydı. Bir dolar seksen yedi sent. Ertesi gün Noel olacaktı.
 - **yandex**: Bir dolar seksen yedi sent. Hepsi bu kadardı. Ve bunun altmış senti kuruştu. Pennies, bakkalı, sebzeciyi ve kasabı buldozerle bu kadar yakın anlaşmanın ima ettiği sessiz cimrilik iddiasıyla yanakları yanana kadar birer ikişer kurtardı. Della üç kez saydı. Bir dolar seksen yedi sent. Ve ertesi gün Noel olacaktı.
 
-### Segment 2:13
+#### Segment 2:13
 
 **Original (EN):** “I buy hair,” said Madame. “Take yer hat off and let’s have a sight at the looks of it.”
 
-- **opencode-polish**: “Saç satın alırım,” dedi Madame. “Şapkanızı çıkarın da saçlarınızı görelim.”
-- **opencode**: “Saç satın alırım,” dedi Madame. “Şapkanını çıkar da saçının görünüşüne bir bakalım.”
 - **argos**: “ Saç satın alıyorum,” dedi Madam. “Köpekten çıkıp bir görüşe sahip olalım.”
 - **bing**: “Saç alırım,” dedi Madame. “Şapkanı çıkar ve nasıl göründüğüne bir bakalım.”
 - **google**: "Saç satın alıyorum" dedi Madam. "Şapkanı çıkar ve şuna bir bakalım."
 - **modernmt**: “Saç satın alıyorum ,” dedi Madam. "Şapkanı çıkar ve görünüşüne bir bakalım ."
-- **ollama-aya**: “Saç satın alırım,” dedi Bayan. “Şapkanı çıkar ve saçlarının halini görelim.”
+- **ollama-aya**: "Saç satın alırım," dedi Bayan. "Şapkanı çıkar ve saçlarının halini görelim."
 - **ollama-gemma3-polish**: “Saç alırım,” dedi Madame. “Şapkanızı çıkarın ve bakalım nasıl bir duruşu var?”
 - **ollama-gemma3**: “Saçı alırım,” dedi Madame. “Şaptonu çıkar ve halının görünüşüne bakalım.”
+- **opencode-polish**: “Saç satın alırım,” dedi Madame. “Şapkanızı çıkarın da saçlarınızı görelim.”
+- **opencode**: “Saç satın alırım,” dedi Madame. “Şapkanını çıkar da saçının görünüşüne bir bakalım.”
 - **yandex**: ”Saç alıyorum," dedi Madam. "Şapkanı çıkar ve ona bir göz atalım.”
 
-### Segment 2:27
+#### Segment 2:27
 
 **Original (EN):** “Jim, darling,” she cried, “don’t look at me that way. I had my hair cut off and sold because I couldn’t have lived through Christmas without giving you a present. It’ll grow out again—you won’t mind, will you? I just had to do it. My hair grows awfully fast. Say ‘Merry Christmas!’ Jim, and let’s be happy. You don’t know what a nice—what a beautiful, nice gift I’ve got for you.”
 
-- **opencode-polish**: “Jim, sevgilim,” diye bağırdı, “bana böyle bakma. Saçlarımı kestirip sattım; çünkü sana bir hediye vermezsem Noel'i geçiremezdim. Yine uzayacak—umursamayacaksın, değil mi? Bunu yapmam gerekiyordu. Saçlarım olağanüstü çabuk uzar. ‘Mutlu Noel!’ de, Jim, mutlu olalım. Sen bilmezsin, elimde senin için ne kadar güzel bir—ne kadar harika, ne kadar güzel bir hediye var ki!”
-- **opencode**: “Jim, sevgilim,” diye haykırdı, “beni böyle srma. Saçımı kestirip sattım; çünkü sana bir hediye vermezsem Noel'i karşılayamazdım. Yeniden uyacak—umurunu çekmez, değil mi? Bunu yapmam gerekiyordu. Saçım çok çabuk uzar. ‘Mutlu Noeller!’ de, Jim, mutlu olalım. Sen bilmezsin, senin için ne kadar—ne kadar güzel, ne kadar harika bir hediye hazırladım.”
 - **argos**: “Jim, sevgilim,” diye bağırdı, “Bana bu şekilde bakmıyor. Saçımı kestim ve sattım çünkü size bir hediye vermeden Noel'de yaşayamadım. Tekrar büyüyecek - aklınızda olmayacak mısın? Sadece bunu yapmak zorunda kaldım. Saçlarım korkunç bir şekilde hızlı büyür. De ki: "Ey Noel! Jim, ve mutlu olalım. Ne güzel olduğunu bilmiyorsunuz – sizin için sahip olduğum güzel, güzel bir hediye.”
 - **bing**: “Jim, tatlım,” diye ağladı, “bana öyle bakma. Saçımı kestirdim ve sattım çünkü sana bir hediye vermeden Noel’i geçiremezdim. Tekrar uzar—umursamazsın, değil mi? Bunu yapmak zorundaydım. Saçım inanılmaz hızlı uzar. ‘Mutlu Noeller!’ de Jim, ve mutlu olalım. Ne kadar hoş—ne kadar güzel, hoş bir hediyem olduğunu bilmiyorsun.”
 - **google**: "Jim, tatlım," diye bağırdı, "bana öyle bakma. Saçımı kestim ve sattım çünkü sana bir hediye vermeden Noel'i atlatamazdım. Tekrar uzayacak, aldırmazsın, değil mi? Bunu yapmak zorundaydım. Saçlarım çok hızlı uzuyor. 'Mutlu Noeller!' de Jim ve hadi mutlu olalım. Sana ne kadar güzel, ne güzel, ne hoş bir hediye aldığımı bilemezsin."
 - **modernmt**: "Jim, sevgilim ," diye bağırdı," bana öyle bakma. Saçımı kestirdim ve sattım çünkü sana bir hediye vermeden Noel'i atlatamazdım. Tekrar uzayacak - aldırmazsın, değil mi? Sadece bunu yapmak zorundaydım. Saçlarım çok hızlı uzuyor. ‘Mutlu Noeller !' de Jim, hadi mutlu olalım. Sana ne kadar güzel, ne kadar güzel bir hediyem olduğunu bilmiyorsun ."
+- **ollama-aya**: "Jim sevgili," diye haykırdı, "böyle bana bakma. Saçımı kesip sattım çünkü Noel'den önce sana bir hediye edemeden geçemezdim. Tekrar uzayacak - rahatsız etmeyecek, değil mi? Yapmak zorundaydım. Saçlarım çok hızlı büyüyor. 'Mutlu Noeller!' de, Jim, ve mutlu olalım. Ne kadar güzel, ne kadar güzel bir hediye sana aldım."
 - **ollama-gemma3-polish**: “Jim, canım,” diye bağırdı, “ona öyle bakma. Saçımı kestirdim ve sattım çünkü Noel’i hiç yaşayamazdım eğer sana bir hediye vermezsem. Yeniden uzar—sana biraz rahatsızlık olmaz mı? Sadece yapmam gerekiyordu. Saçım çok hızlı uzuyor. ‘Mutlu Noeller!’ Jim, ve mutlu olalım. Ne kadar güzel—ne kadar güzel bir hediye aldığımı bilmezsin,” dedi.
 - **ollama-gemma3**: “Jim, canım,” diye bağırdı, “bana böyle bakma. Saçımı kestirdim ve sana Noel’i atlamamak için bir hediye vermeden yaşayamayacaktım diye sattım. Tekrar uzar—sıkılmaz mısın? Sadece yapmam gerekiyordu. Saçım çok hızlı büyüyor. ‘Mutlu Noeller!’ de, Jim, ve mutlu olalım. Seni ne kadar güzel—ne kadar güzel bir hediye aldığımı bilmezsin,”
+- **opencode-polish**: “Jim, sevgilim,” diye bağırdı, “bana böyle bakma. Saçlarımı kestirip sattım; çünkü sana bir hediye vermezsem Noel'i geçiremezdim. Yine uzayacak—umursamayacaksın, değil mi? Bunu yapmam gerekiyordu. Saçlarım olağanüstü çabuk uzar. ‘Mutlu Noel!’ de, Jim, mutlu olalım. Sen bilmezsin, elimde senin için ne kadar güzel bir—ne kadar harika, ne kadar güzel bir hediye var ki!”
+- **opencode**: “Jim, sevgilim,” diye haykırdı, “beni böyle srma. Saçımı kestirip sattım; çünkü sana bir hediye vermezsem Noel'i karşılayamazdım. Yeniden uyacak—umurunu çekmez, değil mi? Bunu yapmam gerekiyordu. Saçım çok çabuk uzar. ‘Mutlu Noeller!’ de, Jim, mutlu olalım. Sen bilmezsin, senin için ne kadar—ne kadar güzel, ne kadar harika bir hediye hazırladım.”
 - **yandex**: "Jim, sevgilim,” diye bağırdı, “bana öyle bakma. Sana bir hediye vermeden Noel'i yaşayamayacağım için saçımı kestirip sattırdım. Tekrar büyüyecek - sakıncası olmayacak, değil mi? Sadece yapmak zorundaydım. Saçlarım çok hızlı uzuyor. Mutlu Noeller de! Jim ve mutlu olalım. Senin için ne kadar güzel, ne kadar güzel bir hediyem olduğunu bilmiyorsun.”
 
-### Segment 2:44
+#### Segment 2:44
 
 **Original (EN):** The magi, as you know, were wise men—wonderfully wise men—who brought gifts to the Babe in the manger. They invented the art of giving Christmas presents. Being wise, their gifts were no doubt wise ones, possibly bearing the privilege of exchange in case of duplication. And here I have lamely related to you the uneventful chronicle of two foolish children in a flat who most unwisely sacrificed for each other the greatest treasures of their house. But in a last word to the wise of these days let it be said that of all who give gifts these two were the wisest. Of all who give and receive gifts, such as they are wisest. Everywhere they are wisest. They are the magi.
 
-- **opencode-polish** (from the bilingual resume): Bildiğiniz gibi, Magi’ler bilge, hatta olağanüstü derecede bilge kişilerdi; yulakta yatan bebek İsa’ya hediye getiren onlardı. Noel hediyesi verme sanatını icat eden de onlardı. Bilge olduklarından hediyeleri de kuşkusuz bilgeydi; belki de aynı hediye verildiğinde karşılığında başka birini alma hakkını da taşıyorlardı. Ve şimdi size bir dairede yaşayan iki aptal çocuğun olaysız hikâyesini bural bural anlattım: Birbirleri için evlerinin en değerli hazinelerini en akılsızca feda ettiler. Ama çağımızın bilge kişilerine son bir söz olarak şunu söyleyelim: Hediye verenlerin arasında en bilge olan bu iki çocuktu. Hediye verip alanların arasında da en bilge olanlar onlardır. Her yerde en bilge onlardır. Onlar Magi’lerdir.
-- **opencode**: Bildiğiniz gibi, Magi'ler yemlikte yatan Bebek'e armağan getiren bilge kişilerdi—olağanüstü bilge kişilerdi. Onlar, Noel hediyesi verme sanatını icat edenlerdi. Bilge olduklarından, verdikleri armağanlar da kuşkusuz bilgeydi; aynı armağan iki kez verilmişse değiştirilebilmeleri için özel bir hak taşıyor olabilirlerdi. Ve şimdi size, bir apartman dairesinde yaşayan iki akılsız çocuğun, birbirleri uğruna dairenin en kıymetli hazinelerini büyük bir akılsızlıkla feda etmelerinin olaysız hikâyesini beceriksizce anlatayım. Ama bugünün bilge kişilerine son bir söz söyleyelim de: armağan verenler arasında en bilge kişiler bu iki çocuktu. Hem armağan verip hem de armağan alanların arasında da en bilge kişiler, işte bu ikisiydi. Nerede olurlarsa olsunlar en bilge kişiler onlardır. Onlar Magi'lerdir.
 - **argos**: Bildiğiniz gibi magi, bilge erkeklerdi - inanılmaz derecede bilge erkekler - erkekte Babe'ye hediyeler getiren. Noel hediyelerini vermenin sanatını icat ettiler. Bilge olmak, hediyeleri şüphesiz bilge değildi, muhtemelen duplikasyon durumunda değişim ayrıcalıklarını taşıyan. Ve işte size, evin en büyük hazineleri için en doğru şekilde kurban edilen bir dairedeki iki aptal çocuğun eşitsiz kronikiyle ilgili oldum. Ancak bu günlerden bilgeye son bir kelimede, bu ikisine hediye veren herkesin bilge olduğu söylenmelidir. Kim verir ve hediyeler alırlar, onlar bilgedir. Her yerde bilgedirler. Onlar magi’dir.
 - **bing**: Bildiğiniz gibi, büyücüler (Magi), bilge insanlardı—olağanüstü bilge insanlardı—ve beşiğin içindeki Bebek'e hediyeler getirdiler. Noel hediyesi verme sanatını icat ettiler. Bilge olduklarından, hediyeleri kuşkusuz bilge hediyelerdi, muhtemelen çoğaltıldığında değiştirme ayrıcalığını taşıyan. Ve işte burada size, birbirlerine evlerindeki en büyük hazineleri en akılsızca feda eden, iki aptal çocuğun olaysız kroniğini berbat bir şekilde aktardım. Ama bugünün bilge insanlarına son bir söz olarak şunu söyleyelim ki, hediye verenlerin hepsi arasında bu ikisi en bilgeliydi. Hediye veren ve alanların hepsi arasında, onlar en bilgeliydi. Heryerde en bilgeliydiler. Onlar büyücülerdi (Magi).
 - **google**: Bildiğiniz gibi büyücüler, yemlikteki Bebek'e hediyeler getiren bilge adamlardı - olağanüstü bilge adamlardı. Noel hediyesi verme sanatını icat ettiler. Bilge olduklarına göre, onların armağanları şüphesiz akıllıcaydı ve muhtemelen kopyalanması durumunda takas ayrıcalığını taşıyordu. Ve burada size, bir apartman dairesinde evlerinin en büyük hazinelerini birbirleri için son derece akılsızca feda eden iki aptal çocuğun olaysız öyküsünü yetersiz bir şekilde anlattım. Ama günümüzün bilgelerine son söz olarak şunu söyleyelim ki, hediye verenler arasında en bilge olanlar bu ikisiydi. Hediye veren ve alan herkes arasında en bilge olanlar onlar gibi. Her yerde onlar en bilgedir. Onlar büyücüler.
 - **modernmt**: Bildiğiniz gibi büyücüler, yemlikteki Babe'e hediyeler getiren bilge adamlardı - son derece bilge adamlardı. Noel hediyesi verme sanatını icat ettiler. Bilge oldukları için, hediyeleri şüphesiz bilge olanlardı, muhtemelen kopyalama durumunda değiş tokuş ayrıcalığını taşıyorlardı. Ve burada, evlerinin en büyük hazinelerini birbirleri için en akılsızca feda eden bir apartman dairesindeki iki aptal çocuğun olaysız tarihini size acınası bir şekilde anlattım. Ancak bu günlerin bilgesine son bir söz olarak, bu ikisinin hediye verenlerin en bilgesi olduğu söylenmelidir. En bilge oldukları gibi hediye veren ve alan herkes arasında. En bilge oldukları her yerde. Onlar büyücülerdir.
+- **ollama-aya**: Magi'ler, bilirsiniz, bebek için hediyeler getiren bilge adamlardı - harika bilge adamlar - ahırda. Hediye verme sanatını icat ettiler. Bilge oldukları için hediyeleri kuşkusuz bilge hediyelerdi, belki de ikizlik durumunda takas imtiyazına sahip olanlar. Ve burada size iki aptal çocuk hakkında önemsiz bir şekilde anlattığım, bir dairede yaşayan ve en aptalca şekilde birbirlerinin evdeki en büyük hazinelerini feda edenlerin hikayesini aktarıyorum. Ancak son bir sözle bu günlerin bilgelerine şunu söyleyelim ki, tüm hediye verenler arasında bunlar en bilgeleriydi. Tüm hediye veren ve alanlardan, onlar gibisi en bilgeleri. Her yerde onlar bilgelerdir. Magi'ler onlardır.
 - **ollama-gemma3-polish**: Magi’yi, sizler de bildiğiniz gibi, doğuşun ilk anlarında ona hediyeler getirmiş olan bilge kişilerdi—inanılmaz derecede bilge kişiler—ve hediye vermenin sanatını icat ettiler. Bilgeleri olmaları sebebiyle, hedeflerinden şüphe yok ki de çok da akıllıydılar; belki de takas etme ayrıcalığına sahip olabilirler. Ve şimdi size, lam selamla anlatacağım evlerinin en değerli hazinelerini birbirlerine feda eden iki aptal çocuğun sıradan ve sıkıcı öyküsü bu. Fakat günümüzün bilge insanlarına son söz olarak belirtmek gerekirse, hediye verenlerden en bilgeli olan ikisi buydu. Hediye veren ve alanlardan, onlara benzer şekilde en bilgiliydiler. Her yerde onlar en bilgilidirler; onlar, magi’dir.
 - **ollama-gemma3**: Mageus’un, yani sizler de bildiğiniz üzere, nasıl bilge adamlar olduğunu, Doğuşan Mesih’e mahzende hediyeler getiren o kadar da bilge adamlar olduklarını hatırlatmak isterim. Hediye vermenin sanatını onlar icat ettiler. Bilgeleri sayesinde hediye-leri elbette de bilgece olurdu, belki de taklit durumunda değişim keyfi taşırlardı. Ve şimdi size, iki aptal çocuğun düzgün bir evde, en ahmakça şekilde birbirlerine evlerinin en değerli hazinelerini feda ettikleri sıradan ve olaydan uzak tarihçesini zayıf bir dille anlattım. Fakat günümüzün bilge adamlarına son söz olarak şunu belirtmek gerek ki, hediye verenlerden en bilgeli olan ikisi budur. Hediye veren ve alanlardan, onlardan daha bilgiliydiler. Her yerde onlar daha bilgilidirler. Onlar, Mageus’lardır.
+- **opencode**: Bildiğiniz gibi, Magi'ler yemlikte yatan Bebek'e armağan getiren bilge kişilerdi—olağanüstü bilge kişilerdi. Onlar, Noel hediyesi verme sanatını icat edenlerdi. Bilge olduklarından, verdikleri armağanlar da kuşkusuz bilgeydi; aynı armağan iki kez verilmişse değiştirilebilmeleri için özel bir hak taşıyor olabilirlerdi. Ve şimdi size, bir apartman dairesinde yaşayan iki akılsız çocuğun, birbirleri uğruna dairenin en kıymetli hazinelerini büyük bir akılsızlıkla feda etmelerinin olaysız hikâyesini beceriksizce anlatayım. Ama bugünün bilge kişilerine son bir söz söyleyelim de: armağan verenler arasında en bilge kişiler bu iki çocuktu. Hem armağan verip hem de armağan alanların arasında da en bilge kişiler, işte bu ikisiydi. Nerede olurlarsa olsunlar en bilge kişiler onlardır. Onlar Magi'lerdir.
 - **yandex**: Magi, bildiğiniz gibi, yemlikteki Bebeğe hediyeler getiren bilge adamlardı — harika bilge adamlardı —. Noel hediyeleri verme sanatını icat ettiler. Bilge oldukları için, hediyeleri şüphesiz bilge olanlardı, muhtemelen çoğaltma durumunda değiş tokuş ayrıcalığını taşıyorlardı. Ve burada size, evlerinin en büyük hazinelerini birbirleri için en akılsızca feda eden bir apartmandaki iki aptal çocuğun olaysız hikayesini anlattım. Ama bu günlerin bilgesine son bir sözle, hediye verenlerin hepsinin en bilge oldukları söylensin. Hediye veren ve alan herkesten, en bilge oldukları gibi. Her yerde en akıllılar. Onlar büyücülerdir.
 
-## Honest quality judgement
-
-Ranking for **literary Turkish** on this text:
-
-1. **OpenCode + `--polish`** (`opencode/space-bunny-free`): the best of all engines. It reads like edited
-   Turkish prose rather than translation: "Birer ikişer kuruş biriktirmek için bakkala, manava ve kasaba gözünü
-   karartıyordu; bu kadar sıkı pazarlığın sessizce ima ettiği cimrilik ithamı yanaklarını yakıyordu" is the
-   only rendering that gets the hard sentence both right and natural. It keeps names, dialogue punctuation
-   and em dashes, and uses the right register ("Şapkanızı çıkarın da saçlarınızı görelim"). It is not
-   flawless: in 2:44 it wrote "yulakta" (for *yemlikte*) and the invented "bural bural" (for *lamely*).
-   It is also very slow on the free tier (6,932 s) and left 8/51 segments for a rerun.
-2. **OpenCode draft** (same model, no polish): equally idiomatic, but with real typos the polish pass fixes:
-   "beni böyle **srma**" (for *bakma*), "Yeniden **uyacak**" (for *uzayacak*), "**Şapkanını**". It also
-   left 6/51 segments untranslated.
-3. **Bing**: the most natural and accurate of the MT engines. It gets the hard sentence right
-   ("marketçiyle, sebzeciyle ve kasapla pazarlık yaparken… sessiz tutumluluk suçlaması"), renders "pennies" as
-   "bozuk para", and keeps Turkish dialogue punctuation and em dashes. Weak points: it keeps "cent", renders
-   "she cried" as "diye ağladı" (wrong here; she exclaimed, she did not weep), and has small slips
-   ("Heryerde", "en bilgeliydi"). Takes 43 s.
-4. **Google**: fluent and very fast (1.7 s), but literal on the idioms ("buldozerlerle ezerek… iki kişiyi
-   kurtardı", "Pennies" left untranslated), and it switches to straight quotes.
-5. **Yandex ≈ ModernMT**: comparable to Google with more calques ("buldozerle", "Büyücünün Armağanı").
-   ModernMT adds spacing errors around punctuation.
-6. **Ollama aya-expanse:8b**: idiomatic Turkish phrasing, but it hallucinates numbers ("otuz yedi sent",
-   "On altı senti").
-7. **Ollama gemma3:4b (with or without polish)**: some nice literary touches ("Jim, canım"), but too many
-   invented words ("melekse", "para baytası", "Şaptonu", "Mageus"). A 4B model is too small for this job.
-8. **Argos**: literal and often ungrammatical ("Bir bir dolar ve sekizi yedi sent", "Köpekten çıkıp…").
-
-**Recommended setup:** `epub-tr translate book.epub --engine opencode --polish --fallback bing`
-(or `--fallback google`). Rerun the same command later to fill segments that failed on the free tier;
-everything already done comes from the cache. For speed, use `--engine bing`, or `--engine google` with no
-setup. Even the best output above still needs a human edit to read as published literary Turkish.

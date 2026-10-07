@@ -1,0 +1,34 @@
+Book: 'The Gift of the Magi' by O. Henry | 2 content docs | 51 segments, 11237 chars | engines: ['opencode/opencode/big-pickle']
+WARNING engine opencode failed for 6 segments: opencode failed after 3 attempts: opencode opencode/space-bunny-free: empty output (exit 0): 
+ERROR all engines failed for unit starting 2:0: opencode failed after 3 attempts: opencode opencode/space-bunny-free: empty output (exit 0): 
+{
+  "output": "out/magi.opencode.tr.epub",
+  "seconds": 3730.0,
+  "segments": 51,
+  "chars": 11237,
+  "translated": 45,
+  "untranslated": 6,
+  "selected_missing": 6,
+  "markup_fallbacks": 0,
+  "engine_segments": {
+    "opencode (cache)": 2,
+    "opencode": 43
+  },
+  "engine_calls": {
+    "opencode": 11
+  },
+  "failures": {
+    "opencode": 6
+  },
+  "polished_segments": 0,
+  "cache_hits": 3,
+  "glossary_size": 7,
+  "errors": [
+    "opencode: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: opencode timed out after 600s (opencode/space-bunny-free)",
+    "opencode: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: unit failed: opencode failed after 3 attempts: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: opencode timed out after 600s (opencode/space-bunny-free)"
+  ]
+}

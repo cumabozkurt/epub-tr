@@ -1,0 +1,38 @@
+Book: 'The Gift of the Magi' by O. Henry | 2 content docs | 51 segments, 11237 chars | engines: ['opencode/opencode/big-pickle']
+WARNING polish pass failed, keeping draft: opencode failed after 3 attempts: opencode timed out after 600s (opencode/space-bunny-free)
+WARNING engine opencode failed for 8 segments: opencode failed after 3 attempts: opencode opencode/space-bunny-free: empty output (exit 0): 
+ERROR all engines failed for unit starting 2:37: opencode failed after 3 attempts: opencode opencode/space-bunny-free: empty output (exit 0): 
+{
+  "output": "out/magi.opencode-polish.tr.epub",
+  "seconds": 6932.3,
+  "segments": 51,
+  "chars": 11237,
+  "translated": 43,
+  "untranslated": 8,
+  "selected_missing": 8,
+  "markup_fallbacks": 0,
+  "engine_segments": {
+    "opencode": 43
+  },
+  "engine_calls": {
+    "opencode": 22
+  },
+  "failures": {
+    "opencode": 10
+  },
+  "polished_segments": 31,
+  "cache_hits": 1,
+  "glossary_size": 7,
+  "errors": [
+    "opencode: opencode opencode/longcat-2.5-preview-free: empty output (exit 1): Error: Unexpected error\n\ndatabase is locked\n",
+    "opencode: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: opencode timed out after 600s (opencode/space-bunny-free)",
+    "opencode: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: opencode timed out after 600s (opencode/space-bunny-free)",
+    "opencode: opencode timed out after 600s (opencode/space-bunny-free)",
+    "opencode: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: unit failed: opencode failed after 3 attempts: opencode opencode/space-bunny-free: empty output (exit 0): "
+  ]
+}

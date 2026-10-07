@@ -1,0 +1,40 @@
+{
+  "output": "out/magi.opencode.tr.epub",
+  "seconds": 3730.0,
+  "segments": 51,
+  "chars": 11237,
+  "translated": 45,
+  "untranslated": 6,
+  "selected_missing": 6,
+  "markup_fallbacks": 0,
+  "engine_segments": {
+    "opencode (cache)": 2,
+    "opencode": 43
+  },
+  "engine_calls": {
+    "opencode": 11
+  },
+  "failures": {
+    "opencode": 6
+  },
+  "polished_segments": 0,
+  "cache_hits": 3,
+  "glossary_size": 7,
+  "errors": [
+    "opencode: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: opencode timed out after 600s (opencode/space-bunny-free)",
+    "opencode: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: unit failed: opencode failed after 3 attempts: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: opencode opencode/space-bunny-free: empty output (exit 0): ",
+    "opencode: opencode timed out after 600s (opencode/space-bunny-free)"
+  ],
+  "glossary": {
+    "Della": "Della",
+    "Dillingham": "Dillingham",
+    "GUTENBERG™ TAM METİN FİLMİ İZİN VERME SÜRESİ": "THE FULL PROJECT GUTENBERG™ LICENSE",
+    "Hediyenin Getirdiği Mutluluk": "The Gift of the Magi",
+    "Jim": "Jim",
+    "Mme. Sofronie. Hair Goods of All Kinds.": "Mme. Sofronie. Hair Goods of All Kinds.",
+    "Young": "Young"
+  }
+}
