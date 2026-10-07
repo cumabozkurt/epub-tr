@@ -2,6 +2,9 @@ name: Release
 
 # Push a tag vX.Y.Z (scripts/release.py does it) → tests run, sdist + wheel are built, and the GitHub
 # release is created with notes from CHANGELOG.md + CHANGELOG.tr.md and the files + SHA256SUMS.txt attached.
+# If the repository secret PYPI_API_TOKEN exists, the same files are then uploaded to PyPI; without it the
+# PyPI job is skipped with a notice. Run it manually with an existing tag to (re)publish an older release.
+# Trusted publishing (no token) is the documented alternative, see docs/AUTOMATION.md.
 on:
   push:
     tags: ["v*"]
@@ -80,3 +83,49 @@ jobs:
           for f in "epub_tr-$v-py3-none-any.whl" "epub_tr-$v.tar.gz" SHA256SUMS.txt; do
             echo "$names" | grep -qx "$f" || { echo "missing asset $f"; exit 1; }
           done
+
+  pypi:
+    name: Publish to PyPI (when PYPI_API_TOKEN is set)
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Is the PYPI_API_TOKEN secret configured?
+        id: token
+        env:
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [ -n "$PYPI_API_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=PyPI skipped::PYPI_API_TOKEN secret is not set, so nothing was uploaded to PyPI."
+          fi
+      - uses: actions/download-artifact@v8
+        if: steps.token.outputs.present == 'true'
+        with:
+          name: release
+      - uses: actions/setup-python@v7
+        if: steps.token.outputs.present == 'true'
+        with:
+          python-version: "3.13"
+      - name: Upload sdist + wheel with twine
+        if: steps.token.outputs.present == 'true'
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          python -m pip install --upgrade twine
+          python -m twine check --strict dist/*.whl dist/*.tar.gz
+          python -m twine upload --non-interactive --skip-existing dist/*.whl dist/*.tar.gz
+      - name: Verify the release installs from PyPI
+        if: steps.token.outputs.present == 'true'
+        run: |
+          v=${TAG#v}
+          for i in $(seq 1 20); do
+            curl -fsS "https://pypi.org/pypi/epub-tr/$v/json" >/dev/null && break
+            echo "waiting for PyPI ($i)…"; sleep 15
+          done
+          python -m venv /tmp/pypi-check
+          /tmp/pypi-check/bin/pip install --no-cache-dir "epub-tr==$v"
+          /tmp/pypi-check/bin/epub-tr --version
+          echo "::notice title=PyPI::https://pypi.org/project/epub-tr/$v/"

@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Project banner (`docs/images/banner.svg`, text outlined so it renders the same everywhere) at the top of
+  both READMEs, a 1280×640 social preview (`docs/images/social-preview.png`) and `scripts/outline_banner.py`
+  that builds both from `docs/images/banner.src.svg`.
+- Release workflow: a `pypi` job uploads the wheel and sdist to PyPI with `twine` and verifies
+  `pip install epub-tr==X.Y.Z` when the `PYPI_API_TOKEN` secret is set; otherwise it is skipped with a notice.
+  Trusted publishing is documented as the alternative.
+
 ## [1.1.0] - 2026-10-08
 
 ### Added

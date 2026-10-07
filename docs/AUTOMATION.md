@@ -37,8 +37,25 @@ python scripts/release_notes.py v1.1.0   # preview the release notes
    commits `release: vX.Y.Z`, creates an annotated tag and pushes `main` and the tag. It never force-pushes.
 3. The **Release** workflow builds and publishes. Verify the assets with `sha256sum -c SHA256SUMS.txt`.
 
-PyPI publishing is not set up yet. It needs a PyPI trusted publisher (or a token), and installs
-currently come from the wheel attached to the GitHub release or from `git+https://…@vX.Y.Z`.
+## PyPI
+
+The **pypi** job in the Release workflow uploads the same wheel and sdist to
+PyPI (`pypi.org/project/epub-tr`) with `twine`, then installs `epub-tr==X.Y.Z` from PyPI in a clean
+venv to prove it works. It runs only when the repository secret `PYPI_API_TOKEN` exists. Without it the job
+logs a "PyPI skipped" notice and the release still succeeds.
+
+- **Token setup (current):** create an API token on PyPI (first upload: an account-wide token; afterwards
+  a token scoped to `epub-tr`), then
+  `gh secret set PYPI_API_TOKEN -R cumabozkurt/epub-tr` and paste it at the prompt.
+- **Publish an existing tag:** Actions → Release → *Run workflow* with e.g. `v1.1.0`. Uploads use
+  `--skip-existing`, so rerunning is safe.
+- **Trusted publishing (alternative, no secret):** on PyPI add a trusted publisher for owner `cumabozkurt`,
+  repository `epub-tr`, workflow `release.yml` (environment `pypi`). Then give the job
+  `environment: pypi` and `permissions: id-token: write`, and replace the twine step with
+  `uses: pypa/gh-action-pypi-publish@release/v1` (`packages-dir: dist/`, after removing `SHA256SUMS.txt`
+  from `dist/`). Delete the token secret afterwards.
+
+Until the first upload, install from the wheel attached to the GitHub release or from `git+https://…@vX.Y.Z`.
 
 ## Release evidence
 

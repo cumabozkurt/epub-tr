@@ -6,6 +6,15 @@ English: [CHANGELOG.md](CHANGELOG.md).
 
 ## [Unreleased]
 
+### Eklendi
+
+- Proje afişi (`docs/images/banner.svg`; metinler eğriye çevrildiği için her yerde aynı görünür) iki
+  README'nin en üstünde, 1280×640 sosyal önizleme görseli (`docs/images/social-preview.png`) ve ikisini de
+  `docs/images/banner.src.svg` kaynağından üreten `scripts/outline_banner.py`.
+- Sürüm iş akışı: `PYPI_API_TOKEN` sırrı tanımlıysa `pypi` işi wheel ve sdist dosyalarını `twine` ile PyPI'a
+  yükler ve `pip install epub-tr==X.Y.Z` ile doğrular; sır yoksa bir bildirimle atlanır. Güvenilir yayıncı
+  (trusted publishing) alternatif olarak belgelendi.
+
 ## [1.1.0] - 2026-10-08
 
 ### Eklendi

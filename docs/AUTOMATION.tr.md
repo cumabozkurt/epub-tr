@@ -38,9 +38,24 @@ python scripts/release_notes.py v1.1.0   # sürüm notlarını önizleyin
    iter. Asla zorla itmez (force-push).
 3. **Release** iş akışı derler ve yayımlar. Dosyaları `sha256sum -c SHA256SUMS.txt` ile doğrulayın.
 
-PyPI yayını henüz kurulu değil. Bunun için PyPI'da güvenilir yayıncı (trusted publisher) ya da bir
-belirteç gerekiyor. Şimdilik kurulum, GitHub sürümüne eklenen wheel'den ya da `git+https://…@vX.Y.Z`
-adresinden yapılıyor.
+## PyPI
+
+Release iş akışındaki **pypi** işi aynı wheel ve sdist dosyalarını `twine` ile
+PyPI'a (`pypi.org/project/epub-tr`) yükler, sonra temiz bir venv'de PyPI'dan `epub-tr==X.Y.Z` kurarak
+çalıştığını kanıtlar. Yalnızca `PYPI_API_TOKEN` depo sırrı tanımlıysa çalışır. Sır yoksa iş "PyPI skipped"
+bildirimi yazar ve sürüm yine başarıyla tamamlanır.
+
+- **Belirteç kurulumu (şu anki yol):** PyPI'da bir API belirteci oluşturun (ilk yükleme için hesap
+  geneli, sonrasında yalnızca `epub-tr` ile sınırlı bir belirteç), ardından
+  `gh secret set PYPI_API_TOKEN -R cumabozkurt/epub-tr` çalıştırıp istemde yapıştırın.
+- **Var olan bir etiketi yayımlama:** Actions → Release → *Run workflow*, örneğin `v1.1.0` ile. Yüklemeler
+  `--skip-existing` kullanır, yeniden çalıştırmak güvenlidir.
+- **Güvenilir yayıncı (alternatif, sır gerekmez):** PyPI'da sahip `cumabozkurt`, depo `epub-tr`, iş akışı
+  `release.yml` (ortam `pypi`) için güvenilir yayıncı ekleyin. Sonra işe `environment: pypi` ve
+  `permissions: id-token: write` verin, twine adımını `uses: pypa/gh-action-pypi-publish@release/v1` ile
+  değiştirin (`packages-dir: dist/`, önce `SHA256SUMS.txt` dosyasını `dist/`'ten çıkararak). Ardından belirteç sırrını silin.
+
+İlk yüklemeye kadar kurulum, GitHub sürümüne eklenen wheel'den ya da `git+https://…@vX.Y.Z` adresinden yapılır.
 
 ## Sürüm kanıtları
 
