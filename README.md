@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/banner.svg" alt="epub-tr: literary-quality EPUB translation from English to Turkish. An open book with &quot;One dollar and eighty-seven cents.&quot; on the English page and &quot;Bir dolar seksen yedi sent.&quot; on the Turkish page" width="100%">
+</p>
+
 # epub-tr — literary-quality EPUB translator (Turkish first)
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README.md)
@@ -225,7 +229,7 @@ book.epub ──► epub_io.Book (ebooklib + lxml) ── documents, spine, OPF,
 | `epub_tr/prompts.py` | system/user prompts (Turkish literary rules, dialogue style) |
 | `epub_tr/cache.py` | SQLite cache (WAL, lock retry) |
 | `epub_tr/engines/` | `base.py` interface, `llm.py` (OpenCode, Ollama, OpenAI-compatible), `mt.py` (Google, translators, MyMemory, Lingva, LibreTranslate, Argos) |
-| `scripts/` | `compare.py` (side-by-side engine comparison), `validate_epub.py` (EPUBCheck), `check_links.py`, `release.py` + `release_notes.py`, `run_ollama.sh`, `opencode_when_available.sh` (waits for the OpenCode free quota, then runs) |
+| `scripts/` | `compare.py` (side-by-side engine comparison), `validate_epub.py` (EPUBCheck), `check_links.py`, `release.py` + `release_notes.py`, `outline_banner.py` (banner + social preview), `run_ollama.sh`, `opencode_when_available.sh` (waits for the OpenCode free quota, then runs) |
 | `samples/`, `out/` | Project Gutenberg test books and the test-run outputs (all engines, including OpenCode) referenced in `TEST_REPORT.md` |
 
 More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -299,7 +303,7 @@ a package build and EPUBCheck. See [docs/AUTOMATION.md](docs/AUTOMATION.md). Rea
 
 ## Roadmap
 
-* PyPI package (`pip install epub-tr`) through a trusted publisher.
+* PyPI package (`pip install epub-tr`): the release workflow is ready and uploads as soon as the `PYPI_API_TOKEN` secret is set ([details](docs/AUTOMATION.md#pypi)).
 * Per-segment model attribution in `--dump` (which OpenCode model translated what).
 * Optional human-review export (side-by-side HTML or DOCX) and re-import.
 * More target-language rule sets (German, Spanish, Arabic) next to the Turkish one.

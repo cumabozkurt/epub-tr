@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-labelledby="t d">
+  <!-- SOURCE: editable banner. Run scripts/outline_banner.py to regenerate banner.svg (text outlined) and social-preview.png. -->
+  <title id="t">epub-tr</title>
+  <desc id="d">Project banner: an open EPUB book whose left page reads "One dollar and eighty-seven cents." in English and whose right page reads "Bir dolar seksen yedi sent." in Turkish, joined by a red arrow from EN to TR, next to the title epub-tr and the tagline "Literary-quality EPUB translation, English → Turkish".</desc>
+  <defs>
+    <pattern id="ruled" width="1280" height="26" patternUnits="userSpaceOnUse"><path d="M0 25.5H1280" stroke="#1B2A41" stroke-opacity=".05" stroke-width="1"/></pattern>
+    <linearGradient id="pageL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFDF8"/><stop offset=".85" stop-color="#FBF6EA"/><stop offset="1" stop-color="#EDE3CF"/></linearGradient>
+    <linearGradient id="pageR" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#FFFDF8"/><stop offset=".85" stop-color="#FBF6EA"/><stop offset="1" stop-color="#EDE3CF"/></linearGradient>
+    <marker id="head" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#E30A17"/></marker>
+  </defs>
+  <rect width="1280" height="400" fill="#F6F1E7"/>
+  <rect width="1280" height="400" fill="url(#ruled)"/>
+  <rect x="0" y="0" width="12" height="400" fill="#E30A17"/>
+
+  <!-- open book -->
+  <g>
+    <!-- cover edge and shadow -->
+    <path d="M66 118 Q170 96 270 116 Q370 96 474 118 L474 338 Q370 318 270 340 Q170 318 66 338 Z" fill="#1B2A41"/>
+    <ellipse cx="270" cy="352" rx="210" ry="10" fill="#1B2A41" opacity=".12"/>
+    <!-- pages -->
+    <path d="M76 110 Q172 88 268 108 L268 328 Q172 308 76 330 Z" fill="url(#pageL)" stroke="#D9CDB6" stroke-width="1"/>
+    <path d="M464 110 Q368 88 272 108 L272 328 Q368 308 464 330 Z" fill="url(#pageR)" stroke="#D9CDB6" stroke-width="1"/>
+    <!-- left page: English -->
+    <text x="98" y="134" font-size="9" letter-spacing="1.6" fill="#8A7F6C" data-font="sans-600">THE GIFT OF THE MAGI</text>
+    <text x="98" y="168" font-size="19" fill="#1B2A41" data-font="serif-400i">One dollar and</text>
+    <text x="98" y="193" font-size="19" fill="#1B2A41" data-font="serif-400i" data-max-width="150">eighty-seven cents.</text>
+    <g fill="#D9D0C1">
+      <rect x="98" y="210" width="150" height="5" rx="2.5"/><rect x="98" y="225" width="138" height="5" rx="2.5"/>
+      <rect x="98" y="240" width="150" height="5" rx="2.5"/><rect x="98" y="255" width="120" height="5" rx="2.5"/>
+      <rect x="98" y="270" width="146" height="5" rx="2.5"/><rect x="98" y="285" width="90" height="5" rx="2.5"/>
+    </g>
+    <!-- right page: Turkish -->
+    <text x="292" y="134" font-size="9" letter-spacing="1.2" fill="#8A7F6C" data-font="sans-600" data-max-width="140">MÜNECCİMLERİN ARMAĞANI</text>
+    <text x="292" y="168" font-size="19" fill="#1B2A41" data-font="serif-400i">Bir dolar seksen</text>
+    <text x="292" y="193" font-size="19" fill="#1B2A41" data-font="serif-400i">yedi sent.</text>
+    <g fill="#D9D0C1">
+      <rect x="292" y="210" width="150" height="5" rx="2.5"/><rect x="292" y="225" width="142" height="5" rx="2.5"/>
+      <rect x="292" y="240" width="150" height="5" rx="2.5"/><rect x="292" y="255" width="112" height="5" rx="2.5"/>
+      <rect x="292" y="270" width="148" height="5" rx="2.5"/><rect x="292" y="285" width="70" height="5" rx="2.5"/>
+    </g>
+    <!-- bookmark ribbon -->
+    <path d="M446 103 L460 104 L460 360 L453 352 L446 360 Z" fill="#E30A17"/>
+    <!-- EN -> TR arrow over the spine -->
+    <path d="M176 78 Q270 30 360 74" fill="none" stroke="#E30A17" stroke-width="3" stroke-linecap="round" marker-end="url(#head)"/>
+    <rect x="130" y="62" width="40" height="24" rx="12" fill="#1B2A41"/>
+    <text x="139" y="79" font-size="13" letter-spacing="1" fill="#F6F1E7" data-font="sans-600">EN</text>
+    <rect x="368" y="62" width="40" height="24" rx="12" fill="#E30A17"/>
+    <text x="378" y="79" font-size="13" letter-spacing="1" fill="#FFFFFF" data-font="sans-600">TR</text>
+    <!-- EPUB label on the cover -->
+    <rect x="232" y="345" width="76" height="22" rx="4" fill="#1B2A41"/>
+    <text x="244" y="361" font-size="12" letter-spacing="2" fill="#C9A227" data-font="sans-600">EPUB</text>
+  </g>
+
+  <!-- title block -->
+  <text x="560" y="118" font-size="14" letter-spacing="3" fill="#E30A17" data-font="sans-600">OPEN SOURCE · PYTHON · FREE ENGINES</text>
+  <text x="556" y="212" font-size="104" fill="#1B2A41" data-font="serif-700">epub-tr</text>
+  <text x="560" y="258" font-size="26" fill="#1B2A41" data-font="sans-400" data-max-width="680">Literary-quality EPUB translation, English → Turkish</text>
+  <text x="560" y="294" font-size="22" fill="#5B5446" data-font="serif-400i" data-max-width="680">Kitabın yapısı bozulmadan, doğal ve edebi bir Türkçeyle</text>
+  <g data-chips="560,322,34,12" font-size="14" fill="#1B2A41">
+    <text data-font="sans-600">layout intact</text>
+    <text data-font="sans-600">bilingual</text>
+    <text data-font="sans-600">resume cache</text>
+    <text data-font="sans-600">EPUBCheck clean</text>
+  </g>
+</svg>

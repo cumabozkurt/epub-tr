@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/banner.svg" alt="epub-tr: İngilizceden Türkçeye edebi kalitede EPUB çevirisi. İngilizce sayfasında &quot;One dollar and eighty-seven cents.&quot;, Türkçe sayfasında &quot;Bir dolar seksen yedi sent.&quot; yazan açık bir kitap" width="100%">
+</p>
+
 # epub-tr — edebi kalitede EPUB çevirmeni (önce Türkçe)
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README.md)
@@ -215,7 +219,7 @@ kitap.epub ─► epub_io.Book (ebooklib + lxml) ── belgeler, spine, OPF, na
 | `epub_tr/prompts.py` | sistem/kullanıcı istemleri (Türkçe edebi kurallar, diyalog biçimi) |
 | `epub_tr/cache.py` | SQLite önbellek (WAL, kilit için yeniden deneme) |
 | `epub_tr/engines/` | `base.py` arayüz, `llm.py` (OpenCode, Ollama, OpenAI uyumlu), `mt.py` (Google, translators, MyMemory, Lingva, LibreTranslate, Argos) |
-| `scripts/` | `compare.py` (motorları yan yana karşılaştırma), `validate_epub.py` (EPUBCheck), `check_links.py`, `release.py` + `release_notes.py`, `run_ollama.sh`, `opencode_when_available.sh` (OpenCode kotası açılınca çalıştırır) |
+| `scripts/` | `compare.py` (motorları yan yana karşılaştırma), `validate_epub.py` (EPUBCheck), `check_links.py`, `release.py` + `release_notes.py`, `outline_banner.py` (afiş + sosyal önizleme), `run_ollama.sh`, `opencode_when_available.sh` (OpenCode kotası açılınca çalıştırır) |
 | `samples/`, `out/` | Project Gutenberg deneme kitapları ve `TEST_REPORT.md`'deki çıktılar (OpenCode dahil tüm motorlar) |
 
 Ayrıntılar: [docs/ARCHITECTURE.tr.md](docs/ARCHITECTURE.tr.md).
@@ -289,7 +293,7 @@ Gerçek motor sonuçları: [TEST_REPORT.tr.md](TEST_REPORT.tr.md). 15 açık kay
 
 ## Yol haritası
 
-* Güvenilir yayıncı (trusted publisher) üzerinden PyPI paketi (`pip install epub-tr`).
+* PyPI paketi (`pip install epub-tr`): sürüm iş akışı hazır, `PYPI_API_TOKEN` sırrı tanımlanır tanımlanmaz yükler ([ayrıntılar](docs/AUTOMATION.tr.md#pypi)).
 * `--dump` çıktısında parça başına model bilgisi (hangi OpenCode modeli neyi çevirdi).
 * İsteğe bağlı insan redaksiyonu dışa aktarımı (yan yana HTML ya da DOCX) ve geri alma.
 * Türkçenin yanında başka hedef diller için kural setleri (Almanca, İspanyolca, Arapça).
