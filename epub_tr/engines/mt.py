@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import html
-import json
 import urllib.parse
 
 import requests
@@ -23,6 +22,36 @@ def _pack(texts, max_chars):
         size += len(t)
     if batch:
         yield batch
+
+
+def _split_bytes(text, limit):
+    """Split text into pieces of at most ``limit`` UTF-8 bytes: sentence boundaries first, then
+    words, then characters (a single over-long sentence or word must not cause endless recursion)."""
+    import re
+    pieces = []
+    for unit in re.split(r"(?<=[.!?;])\s+", text):
+        if len(unit.encode()) <= limit:
+            pieces.append(unit)
+            continue
+        for word in unit.split():
+            while len(word.encode()) > limit:
+                cut = limit
+                while len(word[:cut].encode()) > limit:
+                    cut -= 1
+                pieces.append(word[:cut])
+                word = word[cut:]
+            pieces.append(word)
+    chunks, cur = [], ""
+    for p in pieces:
+        cand = (cur + " " + p).strip() if cur else p
+        if cur and len(cand.encode()) > limit:
+            chunks.append(cur)
+            cur = p
+        else:
+            cur = cand
+    if cur:
+        chunks.append(cur)
+    return chunks
 
 
 class GoogleFree(Engine):
@@ -125,18 +154,7 @@ class MyMemory(Engine):
 
     def translate_one(self, text):
         if len(text.encode()) > 500:
-            # split on sentence boundaries
-            import re
-            parts = re.split(r"(?<=[.!?;])\s+", text)
-            chunks, cur = [], ""
-            for p in parts:
-                if len((cur + " " + p).encode()) > 480 and cur:
-                    chunks.append(cur)
-                    cur = p
-                else:
-                    cur = (cur + " " + p).strip()
-            chunks.append(cur)
-            return " ".join(self.translate_one(c) for c in chunks)
+            return " ".join(self.translate_one(c) for c in _split_bytes(text, 480))
         params = {"q": text, "langpair": f"{self.source}|{self.target}"}
         if env("MYMEMORY_EMAIL"):
             params["de"] = env("MYMEMORY_EMAIL")
@@ -231,7 +249,7 @@ class Argos(Engine):
             return
         import argostranslate.package as pkg
         import argostranslate.translate as tr
-        langs = {l.code: l for l in tr.get_installed_languages()}
+        langs = {lang.code: lang for lang in tr.get_installed_languages()}
         src, tgt = langs.get(self.source), langs.get(self.target)
         if src and tgt and src.get_translation(tgt):
             Argos._ready = True

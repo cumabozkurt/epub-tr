@@ -43,7 +43,7 @@ GUTENBERG_IDS = {"pg-header", "pg-footer", "pg-machine-header", "pg-start-separa
 @dataclass
 class Segment:
     uid: str                 # stable id: "<doc-index>:<n>"
-    doc: "Document"
+    doc: Document
     element: object          # lxml element
     enc: Encoded
     kind: str = "text"       # text | heading | toc
@@ -83,6 +83,15 @@ class Book:
         self.ncx_tree = None
         self.ncx_segments: list[Segment] = []
         self._load_documents()
+
+    def close(self):
+        self.zip.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
 
     # ------------------------------------------------------------------ load
     def _first_meta(self, name):
@@ -172,17 +181,20 @@ class Book:
                     continue
                 name = localname(ch.tag)
                 if doc.is_nav and name in ("a", "span") :
-                    self._add(doc, ch, n, "toc"); n += 1
+                    self._add(doc, ch, n, "toc")
+                    n += 1
                     continue
                 if name in BLOCK_TAGS and not has_block_child(ch):
-                    self._add(doc, ch, n, "heading" if name.startswith("h") and len(name) == 2 else "text"); n += 1
+                    self._add(doc, ch, n, "heading" if name.startswith("h") and len(name) == 2 else "text")
+                    n += 1
                 elif name in CONTAINER_TAGS or name in BLOCK_TAGS:
                     visit(ch)
                 else:
                     # inline element directly in a container (rare): translate as block
                     if (ch.text or "").strip() or len(ch):
                         if not has_block_child(ch):
-                            self._add(doc, ch, n, "text"); n += 1
+                            self._add(doc, ch, n, "text")
+                            n += 1
                         else:
                             visit(ch)
         visit(body)
@@ -226,6 +238,11 @@ class Book:
             else:
                 target = el
             full = decode_into(target, seg.translation, seg.enc, strict=False)
+            if target is not el:
+                # rebuilt inline children (anchors, note refs) must not duplicate the original ids
+                for d in target.iter():
+                    if isinstance(d.tag, str) and d.get("id"):
+                        del d.attrib["id"]
             stats["applied"] += 1
             if not full:
                 stats["lenient"] += 1

@@ -50,8 +50,12 @@ def _load_glossary(path):
 
 
 def cmd_translate(a):
+    with Book(a.input, skip_gutenberg=not a.keep_boilerplate, translate_toc=not a.no_toc) as book:
+        return _translate(a, book)
+
+
+def _translate(a, book):
     t0 = time.time()
-    book = Book(a.input, skip_gutenberg=not a.keep_boilerplate, translate_toc=not a.no_toc)
     src = a.source or (book.language or "en").split("-")[0]
     content_docs = [d for d in book.documents if d.segments and not d.is_nav]
     chosen = _parse_range(a.chapters, len(content_docs))
@@ -92,10 +96,18 @@ def cmd_translate(a):
         polish_engine.check()
 
     cache = Cache(a.cache, enabled=not a.no_cache)
-    book_id = hashlib.sha1(open(a.input, "rb").read()).hexdigest()[:16] + f":{a.target}"
+    try:
+        return _run(a, book, cache, content_docs, docs_segments, engines, polish_engine, src, total, chars, t0)
+    finally:
+        cache.close()
+
+
+def _run(a, book, cache, content_docs, docs_segments, engines, polish_engine, src, total, chars, t0):
+    with open(a.input, "rb") as f:
+        book_id = hashlib.sha1(f.read()).hexdigest()[:16] + f":{a.target}"
 
     print(f"Book: {book.title!r} by {book.creator} | {len(content_docs)} content docs | "
-          f"{total} segments, {chars} chars | engines: {[e.name + ('/' + e.model_id if e.model_id else '') for e in engines]}",
+          f"{total} segments, {chars} chars | engines: {[_label(e) for e in engines]}",
           file=sys.stderr)
 
     try:
@@ -114,7 +126,9 @@ def cmd_translate(a):
 
     title = None
     if a.translate_title and book.title:
-        title_seg = [s for d in docs_segments for s in d if s.kind == "heading" and s.enc.plain().strip().lower() == book.title.strip().lower() and s.translation]
+        wanted = book.title.strip().lower()
+        title_seg = [s for d in docs_segments for s in d
+                     if s.kind == "heading" and s.enc.plain().strip().lower() == wanted and s.translation]
         title = title_seg[0].translation if title_seg else None
         if title and a.bilingual:
             title = f"{book.title} / {title}"
@@ -130,6 +144,7 @@ def cmd_translate(a):
         "translated": applied["applied"], "untranslated": applied["untranslated"],
         "selected_missing": sum(1 for d in docs_segments for s in d if not s.translation),
         "markup_fallbacks": applied["lenient"], "engine_segments": dict(stats.engine_segments),
+        "engine_models": {e.name: e.model_id for e in engines if e.model_id},
         "engine_calls": dict(stats.calls), "failures": dict(stats.failures), "polished_segments": stats.polished,
         "cache_hits": cache.hits, "glossary_size": len(tr.glossary), "errors": stats.errors[:10],
     }
@@ -163,7 +178,11 @@ def cmd_engines(a):
 
 
 def cmd_inspect(a):
-    book = Book(a.input)
+    with Book(a.input) as book:
+        _inspect(a, book)
+
+
+def _inspect(a, book):
     print(f"title={book.title!r} creator={book.creator!r} language={book.language!r} opf={book.opf_path}")
     for d in book.documents:
         print(f"  [{'nav' if d.is_nav else 'doc'}] {d.zip_path}: {len(d.segments)} segments, "
@@ -174,7 +193,25 @@ def cmd_inspect(a):
             print(f"    {s.uid:8s} {s.kind:7s} {s.source[:110]}")
 
 
+def _safe_streams():
+    """Avoid UnicodeEncodeError on consoles/pipes with a legacy code page (e.g. Windows cp1252)."""
+    for s in (sys.stdout, sys.stderr):
+        try:
+            s.reconfigure(errors="backslashreplace")
+        except (AttributeError, ValueError):
+            pass
+
+
+def _label(e) -> str:
+    """'opencode/big-pickle', not 'opencode/opencode/big-pickle'."""
+    m = e.model_id
+    if not m:
+        return e.name
+    return m if m.startswith(e.name + "/") else f"{e.name}/{m}"
+
+
 def main(argv=None):
+    _safe_streams()
     p = argparse.ArgumentParser(prog="epub-tr", description="Literary-quality EPUB translator (Turkish-first)")
     p.add_argument("--version", action="version", version=__version__)
     p.add_argument("-v", "--verbose", action="store_true")

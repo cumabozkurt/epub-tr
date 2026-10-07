@@ -77,13 +77,15 @@ class Translator:
         self.progress = progress
         self.stats = Stats()
         self.glossary = dict(cache.load_glossary(book_id)) if cache else {}
-        self.glossary.update(glossary or {})
+        self.user_glossary = dict(glossary or {})
+        self.glossary.update(self.user_glossary)
         self.gloss_lock = threading.Lock()
         self.names = []
         self.cache_models = {e.name: e.model_id for e in engines}
         rules = prompts.rules_for(target, dialogue)
         self.system = prompts.SYSTEM_PROMPT.format(src=prompts.lang_name(source), tgt=prompts.lang_name(target), rules=rules)
-        self.polish_system = prompts.POLISH_SYSTEM.format(src=prompts.lang_name(source), tgt=prompts.lang_name(target), rules=rules)
+        self.polish_system = prompts.POLISH_SYSTEM.format(src=prompts.lang_name(source), tgt=prompts.lang_name(target),
+                                                          rules=rules)
 
     # ------------------------------------------------------------ helpers
     def _stage(self, engine):
@@ -118,17 +120,23 @@ class Translator:
             except RateLimited as e:
                 last = e
                 self.stats.add_error(engine.name, str(e))
-                time.sleep(min(90, 15 * (2 ** attempt)))
+                if attempt + 1 < self.retries:  # no pointless wait after the final attempt
+                    time.sleep(min(90, 15 * (2 ** attempt)))
             except (EngineError, TagMismatch, KeyError, ValueError) as e:
                 last = e
                 self.stats.add_error(engine.name, str(e))
-                time.sleep(2 * (2 ** attempt))
+                if attempt + 1 < self.retries:
+                    time.sleep(2 * (2 ** attempt))
         raise EngineError(f"{engine.name} failed after {self.retries} attempts: {last}")
 
     # ------------------------------------------------------------ public
     def run(self, docs_segments: list[list]):
         all_segs = [s for d in docs_segments for s in d]
         self.names = detect_names([s.enc.plain() for s in all_segs if s.kind == "text"])
+        # drop learnt entries whose source term is not in this text (e.g. reversed pairs from older runs);
+        # entries the user supplied with --glossary are always kept
+        book_low = " ".join(s.enc.plain() for s in all_segs).lower()
+        self.glossary = {k: v for k, v in self.glossary.items() if k in self.user_glossary or k.lower() in book_low}
         if self.primary.is_llm:
             self._run_llm(docs_segments)
         else:
@@ -180,7 +188,8 @@ class Translator:
         q = '"“”«»'
         src_plain = seg.enc.plain()
         rr = r.strip()
-        if len(rr) > 2 and rr[0] in q and rr[-1] in q and src_plain[:1] not in q and rr.count('"') + rr.count('“') + rr.count('”') == 2:
+        n_quotes = rr.count('"') + rr.count('“') + rr.count('”')
+        if len(rr) > 2 and rr[0] in q and rr[-1] in q and src_plain[:1] not in q and n_quotes == 2:
             r = rr[1:-1].strip()
         if TOKEN_RE.search(r):
             return r
@@ -300,7 +309,7 @@ class Translator:
             return out, found
 
         out, found = self._call_with_retries(engine, call)
-        self._merge_glossary(out)
+        self._merge_glossary(out, joined)
         res = [found.get(i + 1) for i in range(len(segs))]
         missing = [i for i, r in enumerate(res) if not r]
         if missing and depth < 2:
@@ -342,15 +351,20 @@ class Translator:
             self.stats.polished += 1
         return res
 
-    def _merge_glossary(self, out):
+    def _merge_glossary(self, out, source_text=None):
         m = GLOSS_RE.search(out)
         if not m:
             return
+        src_low = source_text.lower() if source_text is not None else None
         with self.gloss_lock:
             for line in m.group(1).splitlines():
                 if "=>" not in line:
                     continue
                 k, v = [x.strip(" -*•\t\"'") for x in line.split("=>", 1)]
+                # the source term must occur in the chunk: models sometimes report reversed
+                # ("translation => source") or invented entries, which would poison later chunks
+                if src_low is not None and k.lower() not in src_low:
+                    continue
                 if k and v and len(k) < 60 and len(v) < 80 and k not in self.glossary:
                     self.glossary[k] = v
 

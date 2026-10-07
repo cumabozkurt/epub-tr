@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import sqlite3
 import threading
@@ -37,6 +36,11 @@ class Cache:
                 " src TEXT, tgt TEXT, source TEXT, result TEXT, created REAL)")
             self.db.execute("CREATE TABLE IF NOT EXISTS glossary (book TEXT, term TEXT, target TEXT, PRIMARY KEY(book, term))")
             self.db.commit()
+
+    def close(self):
+        if self.enabled:
+            with self._lock:
+                self.db.close()
 
     @staticmethod
     def key(engine, model, stage, src, tgt, text) -> str:

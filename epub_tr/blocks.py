@@ -16,8 +16,6 @@ import html
 import re
 from dataclasses import dataclass, field
 
-from lxml import etree
-
 TOKEN_RE = re.compile(r"<\s*(/?)\s*([gxGX])\s*(\d+)\s*(/?)\s*>")
 WS_RE = re.compile(r"\s+")
 # Any other tag-looking thing an engine may have invented (e.g. <i>, </em>)
@@ -49,7 +47,9 @@ class Encoded:
 
     def plain(self) -> str:
         """Text without any placeholder tags (for engines that cannot keep tags)."""
-        return html.unescape(WS_RE.sub(" ", TOKEN_RE.sub("", self.text))).strip()
+        # empty elements (<br/>, <img/>) separate words; wrapping tags do not
+        text = TOKEN_RE.sub(lambda m: " " if m.group(2).lower() == "x" else "", self.text)
+        return html.unescape(WS_RE.sub(" ", text)).strip()
 
 
 def encode(el) -> Encoded:

@@ -80,8 +80,8 @@ def lang_name(code: str) -> str:
 def rules_for(tgt: str, dialogue: str = "quotes") -> str:
     if tgt.lower().startswith("tr"):
         return TURKISH_RULES.format(dialogue_rule=DIALOGUE_RULES.get(dialogue, DIALOGUE_RULES["quotes"]))
-    return ("Rules: write natural, idiomatic, literary {t}; preserve tone, style and register; keep proper "
-            "names; follow {t} punctuation conventions for dialogue.\n").format(t=lang_name(tgt))
+    return (f"Rules: write natural, idiomatic, literary {lang_name(tgt)}; preserve tone, style and register; keep proper "
+            f"names; follow {lang_name(tgt)} punctuation conventions for dialogue.\n")
 
 
 def format_segments(items) -> str:

@@ -6,7 +6,6 @@ import os
 import re
 import shutil
 import subprocess
-import tempfile
 import threading
 
 import requests
@@ -29,6 +28,10 @@ OPENCODE_FREE_MODELS = [
     "opencode/ling-3.1-flash-free",
     "opencode/fledge-alpha-free",
 ]
+
+
+class EmptyOutput(EngineError):
+    """The model finished without producing any text."""
 
 
 class OpenCode(Engine):
@@ -55,7 +58,8 @@ class OpenCode(Engine):
 
     def check(self):
         if not self.bin or not os.path.exists(self.bin):
-            raise EngineUnavailable("opencode not installed: npm i -g opencode-ai  (or curl -fsSL https://opencode.ai/install | bash)")
+            raise EngineUnavailable("opencode not installed: npm i -g opencode-ai  "
+                                    "(or curl -fsSL https://opencode.ai/install | bash)")
 
     def _write_agent(self, system: str) -> str:
         """Each distinct system prompt gets its own agent dir (prompt is static per run)."""
@@ -79,7 +83,7 @@ class OpenCode(Engine):
                         }
                     },
                 }
-                with open(os.path.join(d, "opencode.json"), "w") as f:
+                with open(os.path.join(d, "opencode.json"), "w", encoding="utf-8") as f:
                     json.dump(cfg, f, ensure_ascii=False, indent=2)
         return d
 
@@ -94,6 +98,9 @@ class OpenCode(Engine):
                     self.model = m  # stick to the model that works
                 return out
             except RateLimited as e:
+                last_err = e
+                continue
+            except EmptyOutput as e:  # model answered with nothing: try the next free model
                 last_err = e
                 continue
         raise last_err or EngineError("opencode: no model worked")
@@ -127,6 +134,7 @@ class OpenCode(Engine):
             p.wait(timeout=self.timeout)
         except subprocess.TimeoutExpired:
             p.kill()
+            p.wait()
             raise EngineError(f"opencode timed out after {self.timeout}s ({model})")
         for t in ts:
             t.join(5)
@@ -139,7 +147,7 @@ class OpenCode(Engine):
         if not text.strip():
             if RATE_RE.search(err_all):
                 raise RateLimited(f"opencode {model}: rate limited")
-            raise EngineError(f"opencode {model}: empty output (exit {p.returncode}): {ANSI_RE.sub('', err_all)[-400:]}")
+            raise EmptyOutput(f"opencode {model}: empty output (exit {p.returncode}): {ANSI_RE.sub('', err_all)[-400:]}")
         return text
 
 
