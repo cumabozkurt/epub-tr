@@ -30,8 +30,9 @@ def build(version: str) -> str:
     tr = section((ROOT / "CHANGELOG.tr.md").read_text(encoding="utf-8"), tag)
     if not en or not tr:
         raise SystemExit(f"CHANGELOG.md / CHANGELOG.tr.md need a '## [{tag[1:]}]' section")
-    install = (f"```bash\npip install \"epub-tr @ https://github.com/{REPO}/releases/download/{tag}/"
-               f"epub_tr-{tag[1:]}-py3-none-any.whl\"\n# or from source\npip install \"git+https://github.com/{REPO}@{tag}\"\n```")
+    install = (f"```bash\npip install epub-tr=={tag[1:]}\n# or the wheel attached to this release\n"
+               f"pip install \"epub-tr @ https://github.com/{REPO}/releases/download/{tag}/epub_tr-{tag[1:]}-py3-none-any.whl\"\n"
+               f"# or from source\npip install \"git+https://github.com/{REPO}@{tag}\"\n```")
     return "\n".join([
         "## English", "", en, "", "### Install", "", install, "",
         "Assets: wheel, source distribution and `SHA256SUMS.txt` (verify with `sha256sum -c SHA256SUMS.txt`).", "",

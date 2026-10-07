@@ -14,6 +14,9 @@ English: [CHANGELOG.md](CHANGELOG.md).
 - Sürüm iş akışı: `PYPI_API_TOKEN` sırrı tanımlıysa `pypi` işi wheel ve sdist dosyalarını `twine` ile PyPI'a
   yükler ve `pip install epub-tr==X.Y.Z` ile doğrular; sır yoksa bir bildirimle atlanır. Güvenilir yayıncı
   (trusted publishing) alternatif olarak belgelendi.
+- epub-tr artık PyPI'da: `pip install epub-tr`. 1.1.0 sürümü GitHub sürümündeki dosyaların aynısından
+  yüklendi (SHA-256 doğrulandı). README'de PyPI rozeti ve `pip install` talimatı var; sürüm notları artık
+  `pip install epub-tr==X.Y.Z` ile başlıyor.
 
 ## [1.1.0] - 2026-10-08
 

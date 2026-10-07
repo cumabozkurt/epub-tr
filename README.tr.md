@@ -9,6 +9,7 @@
 [![CI](https://github.com/cumabozkurt/epub-tr/actions/workflows/ci.yml/badge.svg)](https://github.com/cumabozkurt/epub-tr/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/cumabozkurt/epub-tr/actions/workflows/codeql.yml/badge.svg)](https://github.com/cumabozkurt/epub-tr/actions/workflows/codeql.yml)
 [![Release](https://img.shields.io/github/v/release/cumabozkurt/epub-tr?sort=semver)](https://github.com/cumabozkurt/epub-tr/releases/latest)
+[![PyPI](https://img.shields.io/pypi/v/epub-tr.svg)](https://pypi.org/project/epub-tr/)
 [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-3776AB.svg)](pyproject.toml)
 [![Lisans: MIT](https://img.shields.io/badge/lisans-MIT-green.svg)](LICENSE)
 [![EPUBCheck](https://img.shields.io/badge/EPUBCheck-yeni%20hata%20yok-brightgreen.svg)](TEST_REPORT.tr.md)
@@ -82,11 +83,19 @@ yalnızca boşluklar gider. Hız gerekiyorsa `--engine bing` ya da `--engine goo
 
 ## Kurulum
 
+[PyPI](https://pypi.org/project/epub-tr/) üzerinden (Python 3.10+):
+
+```bash
+pip install epub-tr                     # çekirdek
+pip install "epub-tr[argos,extra]"      # + çevrimdışı Argos ve Bing/Yandex/ModernMT
+npm i -g opencode-ai                    # OpenCode CLI (ücretsiz LLM'ler)
+```
+
+`pipx install epub-tr` de çalışır. Geliştirme için depodan:
+
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
-pip install -e .                 # çekirdek (Python 3.10+)
-pip install -e '.[argos,extra]'  # çevrimdışı Argos + Bing/Yandex/ModernMT
-npm i -g opencode-ai             # OpenCode CLI (ücretsiz LLM'ler)
+pip install -e ".[dev]"          # isteğe bağlı motorlar için ,argos,extra ekleyin
 ```
 
 ## Hızlı başlangıç
@@ -293,7 +302,7 @@ Gerçek motor sonuçları: [TEST_REPORT.tr.md](TEST_REPORT.tr.md). 15 açık kay
 
 ## Yol haritası
 
-* PyPI paketi (`pip install epub-tr`): sürüm iş akışı hazır, `PYPI_API_TOKEN` sırrı tanımlanır tanımlanmaz yükler ([ayrıntılar](docs/AUTOMATION.tr.md#pypi)).
+* ~~PyPI paketi~~ tamam: `pip install epub-tr` (1.1.0). Yeni sürümler otomatik yüklenir ([ayrıntılar](docs/AUTOMATION.tr.md#pypi)); sıradaki adım güvenilir yayıncıya (trusted publishing) geçmek.
 * `--dump` çıktısında parça başına model bilgisi (hangi OpenCode modeli neyi çevirdi).
 * İsteğe bağlı insan redaksiyonu dışa aktarımı (yan yana HTML ya da DOCX) ve geri alma.
 * Türkçenin yanında başka hedef diller için kural setleri (Almanca, İspanyolca, Arapça).

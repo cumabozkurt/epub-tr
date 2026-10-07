@@ -55,11 +55,11 @@ logs a "PyPI skipped" notice and the release still succeeds.
   `uses: pypa/gh-action-pypi-publish@release/v1` (`packages-dir: dist/`, after removing `SHA256SUMS.txt`
   from `dist/`). Delete the token secret afterwards.
 
-Until the first upload, install from the wheel attached to the GitHub release or from `git+https://…@vX.Y.Z`.
+v1.1.0 is on [PyPI](https://pypi.org/project/epub-tr/1.1.0/). It was uploaded by hand with twine on 2026-10-08 from the exact files attached to the GitHub release; the PyPI SHA-256 digests match `SHA256SUMS.txt`. The secret is configured, so the next tag publishes automatically.
 
 ## Release evidence
 
 | version | date | release | workflow | assets |
 |---|---|---|---|---|
 | v1.0.0 | 2026-10-03 | [release](https://github.com/cumabozkurt/epub-tr/releases/tag/v1.0.0) | created manually with `gh release create` (before the workflow existed) | – |
-| v1.1.0 | 2026-10-08 | [release](https://github.com/cumabozkurt/epub-tr/releases/tag/v1.1.0) | [Release run 37689167063](https://github.com/cumabozkurt/epub-tr/actions/runs/37689167063) ✅ (test + build, publish) | `epub_tr-1.1.0-py3-none-any.whl`, `epub_tr-1.1.0.tar.gz`, `SHA256SUMS.txt` (verified with `sha256sum -c`) |
+| v1.1.0 | 2026-10-08 | [release](https://github.com/cumabozkurt/epub-tr/releases/tag/v1.1.0) | [Release run 37689167063](https://github.com/cumabozkurt/epub-tr/actions/runs/37689167063) ✅ (test + build, publish) | `epub_tr-1.1.0-py3-none-any.whl`, `epub_tr-1.1.0.tar.gz`, `SHA256SUMS.txt` (verified with `sha256sum -c`); same files on [PyPI](https://pypi.org/project/epub-tr/1.1.0/) |

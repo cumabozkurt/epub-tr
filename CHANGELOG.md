@@ -14,6 +14,9 @@ All notable changes to this project are documented here. The format follows
 - Release workflow: a `pypi` job uploads the wheel and sdist to PyPI with `twine` and verifies
   `pip install epub-tr==X.Y.Z` when the `PYPI_API_TOKEN` secret is set; otherwise it is skipped with a notice.
   Trusted publishing is documented as the alternative.
+- epub-tr is on PyPI: `pip install epub-tr`. Version 1.1.0 was uploaded from the exact GitHub release files
+  (SHA-256 verified). The README has a PyPI badge and `pip install` instructions, and release notes now
+  start with `pip install epub-tr==X.Y.Z`.
 
 ## [1.1.0] - 2026-10-08
 

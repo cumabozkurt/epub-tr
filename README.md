@@ -9,6 +9,7 @@
 [![CI](https://github.com/cumabozkurt/epub-tr/actions/workflows/ci.yml/badge.svg)](https://github.com/cumabozkurt/epub-tr/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/cumabozkurt/epub-tr/actions/workflows/codeql.yml/badge.svg)](https://github.com/cumabozkurt/epub-tr/actions/workflows/codeql.yml)
 [![Release](https://img.shields.io/github/v/release/cumabozkurt/epub-tr?sort=semver)](https://github.com/cumabozkurt/epub-tr/releases/latest)
+[![PyPI](https://img.shields.io/pypi/v/epub-tr.svg)](https://pypi.org/project/epub-tr/)
 [![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-3776AB.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![EPUBCheck](https://img.shields.io/badge/EPUBCheck-no%20new%20errors-brightgreen.svg)](TEST_REPORT.md#epub-validation-epubcheck-540)
@@ -87,11 +88,19 @@ Need it fast? Use `--engine bing` or `--engine google`. Full ranking with all 8 
 
 ## Install
 
+From [PyPI](https://pypi.org/project/epub-tr/) (Python 3.10+):
+
+```bash
+pip install epub-tr                     # core
+pip install "epub-tr[argos,extra]"      # + offline Argos and Bing/Yandex/ModernMT
+npm i -g opencode-ai                    # OpenCode CLI (free LLMs)
+```
+
+`pipx install epub-tr` works too. From a checkout, for development:
+
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
-pip install -e .                 # core (Python 3.10+)
-pip install -e '.[argos,extra]'  # offline Argos + Bing/Yandex/ModernMT
-npm i -g opencode-ai             # OpenCode CLI (free LLMs)
+pip install -e ".[dev]"          # add ,argos,extra for the optional engines
 ```
 
 ## Quick start
@@ -303,7 +312,7 @@ a package build and EPUBCheck. See [docs/AUTOMATION.md](docs/AUTOMATION.md). Rea
 
 ## Roadmap
 
-* PyPI package (`pip install epub-tr`): the release workflow is ready and uploads as soon as the `PYPI_API_TOKEN` secret is set ([details](docs/AUTOMATION.md#pypi)).
+* ~~PyPI package~~ done: `pip install epub-tr` (1.1.0). New releases upload automatically ([details](docs/AUTOMATION.md#pypi)); next step is switching to trusted publishing.
 * Per-segment model attribution in `--dump` (which OpenCode model translated what).
 * Optional human-review export (side-by-side HTML or DOCX) and re-import.
 * More target-language rule sets (German, Spanish, Arabic) next to the Turkish one.

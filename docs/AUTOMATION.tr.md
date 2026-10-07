@@ -55,11 +55,11 @@ bildirimi yazar ve sürüm yine başarıyla tamamlanır.
   `permissions: id-token: write` verin, twine adımını `uses: pypa/gh-action-pypi-publish@release/v1` ile
   değiştirin (`packages-dir: dist/`, önce `SHA256SUMS.txt` dosyasını `dist/`'ten çıkararak). Ardından belirteç sırrını silin.
 
-İlk yüklemeye kadar kurulum, GitHub sürümüne eklenen wheel'den ya da `git+https://…@vX.Y.Z` adresinden yapılır.
+v1.1.0 [PyPI'da](https://pypi.org/project/epub-tr/1.1.0/). GitHub sürümüne eklenen dosyaların aynısı 2026-10-08'de twine ile elle yüklendi; PyPI'daki SHA-256 özetleri `SHA256SUMS.txt` ile eşleşiyor. Sır tanımlı olduğu için bir sonraki etiket otomatik yayımlanır.
 
 ## Sürüm kanıtları
 
 | sürüm | tarih | sürüm sayfası | iş akışı | dosyalar |
 |---|---|---|---|---|
 | v1.0.0 | 2026-10-03 | [sürüm](https://github.com/cumabozkurt/epub-tr/releases/tag/v1.0.0) | iş akışı yokken `gh release create` ile elle oluşturuldu | – |
-| v1.1.0 | 2026-10-08 | [sürüm](https://github.com/cumabozkurt/epub-tr/releases/tag/v1.1.0) | [Release çalıştırması 37689167063](https://github.com/cumabozkurt/epub-tr/actions/runs/37689167063) ✅ (test + derleme, yayım) | `epub_tr-1.1.0-py3-none-any.whl`, `epub_tr-1.1.0.tar.gz`, `SHA256SUMS.txt` (`sha256sum -c` ile doğrulandı) |
+| v1.1.0 | 2026-10-08 | [sürüm](https://github.com/cumabozkurt/epub-tr/releases/tag/v1.1.0) | [Release çalıştırması 37689167063](https://github.com/cumabozkurt/epub-tr/actions/runs/37689167063) ✅ (test + derleme, yayım) | `epub_tr-1.1.0-py3-none-any.whl`, `epub_tr-1.1.0.tar.gz`, `SHA256SUMS.txt` (`sha256sum -c` ile doğrulandı); aynı dosyalar [PyPI'da](https://pypi.org/project/epub-tr/1.1.0/) |
