@@ -22,7 +22,7 @@ documentation-translation repos such as "You-Dont-Know-JS translated" were exclu
 | 10 | [hydropix/TranslateBooksWithLLMs](https://github.com/hydropix/TranslateBooksWithLLMs) | 2,455 | AGPL-3.0 | ✓ (+DOCX, PDF, SRT, TXT) | Ollama, LM Studio, OpenAI-compatible, Gemini, Mistral, DeepSeek, Poe, OpenRouter |
 | 11 | [deusyu/translate-book](https://github.com/deusyu/translate-book) | 2,059 | MIT | ✓ (+PDF/DOCX via Calibre/Pandoc) | Agent "skill" for Codex, Claude Code, OpenClaw (parallel sub-agents) |
 | 12 | [jesselau76/ebook-GPT-translator](https://github.com/jesselau76/ebook-GPT-translator) | 1,734 | MIT | ✓ (+TXT/DOCX/PDF/MOBI) | OpenAI, Azure, OpenAI-compatible, Codex CLI, Claude Code CLI, Gemini CLI |
-| 13 | [OmniDocX/PolyglotPDF](https://github.com/OmniDocX/PolyglotPDF) | 1,324 | GPL-3.0 | partial (PDF, ebook PDFs) | OpenAI-compatible, DeepSeek, Doubao, Qwen, Grok, Ollama, Bing/Google |
+| 13 | OmniDocX/PolyglotPDF (repo returns 404 since 2026-10) | 1,324 | GPL-3.0 | partial (PDF, ebook PDFs) | OpenAI-compatible, DeepSeek, Doubao, Qwen, Grok, Ollama, Bing/Google |
 | 14 | [xunbu/docutranslate](https://github.com/xunbu/docutranslate) | 1,322 | MPL-2.0 | ✓ (+PDF/DOCX/XLSX/MD/SRT/JSON) | Any OpenAI-compatible LLM (+ MinerU for PDF parsing) |
 | 15 | [oomol-lab/epub-translator](https://github.com/oomol-lab/epub-translator) | 857 | MIT | ✓ (bilingual) | Any OpenAI-compatible LLM |
 

@@ -1,14 +1,26 @@
 # epub-tr — literary-quality EPUB translator (Turkish first)
 
-[Türkçe README](README.tr.md) · [MIT License](LICENSE) · Python ≥ 3.9
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README.md)
+[![Türkçe](https://img.shields.io/badge/dil-T%C3%BCrk%C3%A7e-red.svg)](README.tr.md)
+[![CI](https://github.com/cumabozkurt/epub-tr/actions/workflows/ci.yml/badge.svg)](https://github.com/cumabozkurt/epub-tr/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/cumabozkurt/epub-tr/actions/workflows/codeql.yml/badge.svg)](https://github.com/cumabozkurt/epub-tr/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/github/v/release/cumabozkurt/epub-tr?sort=semver)](https://github.com/cumabozkurt/epub-tr/releases/latest)
+[![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-3776AB.svg)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![EPUBCheck](https://img.shields.io/badge/EPUBCheck-no%20new%20errors-brightgreen.svg)](TEST_REPORT.md#epub-validation-epubcheck-540)
 
 `epub-tr` translates EPUB books into **natural, literary Turkish** (other target languages work too)
 while keeping the book intact: HTML formatting, images, CSS, fonts, TOC (nav + NCX), metadata and
 internal links survive. All engines are **free** (no paid API key required).
 
-**Contents:** [Features](#features) · [Engines](#engines) · [Install](#install) · [Quick start](#quick-start) ·
-[Usage](#usage) · [Configuration](#configuration) · [Architecture](#architecture) ·
-[Troubleshooting](#troubleshooting) · [Tests](#tests) · [Contributing](#contributing) · [License](#license)
+**Contents:** [Features](#features) · [Which engine?](#which-engine) · [Engines](#engines) · [Install](#install) ·
+[Quick start](#quick-start) · [Usage](#usage) · [Configuration](#configuration) · [Architecture](#architecture) ·
+[Troubleshooting](#troubleshooting) · [FAQ](#faq) · [Tests](#tests) · [Roadmap](#roadmap) ·
+[Contributing](#contributing) · [License](#license)
+
+**Docs:** [Architecture](docs/ARCHITECTURE.md) · [Engines and measured ranking](docs/ENGINES.md) ·
+[CI and releases](docs/AUTOMATION.md) · [Test report](TEST_REPORT.md) · [Research](RESEARCH.md) ·
+[Changelog](CHANGELOG.md)
 
 ## Features
 
@@ -35,6 +47,24 @@ internal links survive. All engines are **free** (no paid API key required).
   (`--fallback google,argos`), fast fail on OpenCode free-tier rate limits with automatic switching
   between OpenCode free models.
 
+## Which engine?
+
+Measured on O. Henry's *The Gift of the Magi* (51 segments, 11,237 characters; details in
+[TEST_REPORT.md](TEST_REPORT.md), outputs in [`out/`](out)):
+
+| rank | setup | literary quality | time | sample |
+|---|---|---|---|---|
+| 🥇 | `--engine opencode --polish` (free `opencode/space-bunny-free`) | **best**: reads like edited Turkish prose | 6,932 s | "Birer ikişer kuruş biriktirmek için bakkala, manava ve kasaba gözünü karartıyordu…" |
+| 🥈 | `--engine opencode` (draft) | idiomatic, a few typos ("srma", "uyacak") | 3,730 s | |
+| 🥉 | `--engine bing` | most natural machine translation | 43 s | "…kasapla pazarlık yaparken…" |
+| 4 | `--engine google` | fluent but literal, no setup | 1.7 s | "…buldozerlerle ezerek…" |
+
+**Recommended:** `epub-tr translate book.epub --engine opencode --polish --fallback bing`. The OpenCode
+free tier is rate-limited per IP and slow (about 5 minutes per call in our run), so some chunks may fail.
+Run the same command again later: finished segments come from the cache and only the gaps go to the model.
+Need it fast? Use `--engine bing` or `--engine google`. Full ranking with all 8 engines:
+[docs/ENGINES.md](docs/ENGINES.md).
+
 ## Engines
 
 | engine | type | needs |
@@ -55,7 +85,7 @@ internal links survive. All engines are **free** (no paid API key required).
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
-pip install -e .                 # core
+pip install -e .                 # core (Python 3.10+)
 pip install -e '.[argos,extra]'  # offline Argos + Bing/Yandex/ModernMT
 npm i -g opencode-ai             # OpenCode CLI (free LLMs)
 ```
@@ -74,8 +104,8 @@ epub-tr translate samples/pg7256.epub -e google -o magi.tr.epub   # ~2 s, no set
 ## Usage
 
 ```bash
-# best quality, free: OpenCode free LLM + polish pass, Google as safety net
-epub-tr translate book.epub -o book.tr.epub --engine opencode --polish --fallback google
+# best quality, free: OpenCode free LLM + polish pass, Bing as safety net (rerun later to fill gaps)
+epub-tr translate book.epub -o book.tr.epub --engine opencode --polish --fallback bing
 
 # pick an OpenCode model explicitly
 epub-tr translate book.epub --engine opencode -m opencode/nemotron-3-ultra-free
@@ -195,8 +225,10 @@ book.epub ──► epub_io.Book (ebooklib + lxml) ── documents, spine, OPF,
 | `epub_tr/prompts.py` | system/user prompts (Turkish literary rules, dialogue style) |
 | `epub_tr/cache.py` | SQLite cache (WAL, lock retry) |
 | `epub_tr/engines/` | `base.py` interface, `llm.py` (OpenCode, Ollama, OpenAI-compatible), `mt.py` (Google, translators, MyMemory, Lingva, LibreTranslate, Argos) |
-| `scripts/` | `compare.py` (side-by-side engine comparison), `run_ollama.sh`, `opencode_when_available.sh` (waits for the OpenCode free quota, then runs) |
-| `samples/`, `out/` | Project Gutenberg test books and the test-run outputs referenced in `TEST_REPORT.md` |
+| `scripts/` | `compare.py` (side-by-side engine comparison), `validate_epub.py` (EPUBCheck), `check_links.py`, `release.py` + `release_notes.py`, `run_ollama.sh`, `opencode_when_available.sh` (waits for the OpenCode free quota, then runs) |
+| `samples/`, `out/` | Project Gutenberg test books and the test-run outputs (all engines, including OpenCode) referenced in `TEST_REPORT.md` |
+
+More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 **Adding an engine:** subclass `epub_tr.engines.base.Engine`; implement `translate_one()` (MT, or
 `translate_batch()`) or `complete(system, user)` (LLM, set `is_llm = True`) plus `check()` raising
@@ -215,6 +247,8 @@ book.epub ──► epub_io.Book (ebooklib + lxml) ── documents, spine, OPF,
 | `mymemory` returns quota warnings | the anonymous quota per IP is used up; set `MYMEMORY_EMAIL` or switch engine |
 | exit code `2` | some segments stayed untranslated (all engines failed for them); see `errors` in the summary and rerun |
 | formatting lost on some paragraphs | the summary's `markup_fallbacks` counts paragraphs rebuilt leniently (text and anchors kept, inline styling dropped); LLMs that respect placeholders (or `google`) avoid it |
+| OpenCode: `empty output` or `timed out after 600s` | the free model is overloaded; epub-tr moves on to the next free model. Rerun later, raise `EPUB_TR_OPENCODE_TIMEOUT`, or add `--fallback bing` |
+| OpenCode: `database is locked` | two OpenCode processes touched OpenCode's own database at once; the retry usually fixes it, or use `--workers 1` |
 | want a clean re-translation | `--no-cache` or delete/point `--cache` to a new file |
 | Gutenberg header is not translated | intended; add `--keep-boilerplate` |
 
@@ -227,22 +261,54 @@ rate-limited **per IP**; when the quota is exhausted (`FreeUsageLimitError`, `re
 several hours) `epub-tr` fails fast, tries the other free models and then falls back to the next
 engine in `--fallback`. Run again later – cached chunks are not re-translated.
 
+In our real run, the first five free models were rate-limited and every segment came from
+`opencode/space-bunny-free`. The run summary's `engine_models` shows the model actually used. A model that
+answers with empty output is skipped like a rate-limited one. More in [docs/ENGINES.md](docs/ENGINES.md#opencode-free-zen-models).
+
+## FAQ
+
+**Is it really free?** Yes. OpenCode Zen free models, Google, Bing, Yandex, ModernMT, MyMemory, Lingva,
+Argos and Ollama need no paid key. The API presets work with free-tier keys.
+
+**Is my book sent to the internet?** Only to the engine you pick. Use `ollama` or `argos` for fully local
+translation. See [SECURITY.md](SECURITY.md).
+
+**Will the layout break?** Untouched files are copied byte for byte, and inline markup is rebuilt with all
+attributes. Every test output passes EPUBCheck with no new errors.
+
+**Can I stop and continue later?** Yes. Every translated segment is cached, so rerunning the same command
+resumes and fills the gaps.
+
+**Other languages?** `--target de`, `--source fr` and so on work. The literary rules are tuned for Turkish,
+and other targets get a generic literary prompt.
+
+**DRM-protected books?** No. epub-tr only works on DRM-free EPUBs you are allowed to translate.
+
 ## Tests
 
 ```bash
-pip install pytest && python -m pytest -q
+pip install -e ".[dev]"
+python -m pytest -q --cov=epub_tr        # 120 offline tests, ~3 s, no network
+ruff check . && codespell
+python scripts/validate_epub.py          # EPUBCheck on the samples (Java + epubcheck)
 ```
 
-See `RESEARCH.md` (survey of 15 popular open-source translators) and `TEST_REPORT.md`.
+CI runs these on Ubuntu, Windows and macOS with Python 3.10–3.13, plus CodeQL, markdownlint, link checks,
+a package build and EPUBCheck. See [docs/AUTOMATION.md](docs/AUTOMATION.md). Real-engine results:
+[TEST_REPORT.md](TEST_REPORT.md). Survey of 15 open-source translators: [RESEARCH.md](RESEARCH.md).
+
+## Roadmap
+
+* PyPI package (`pip install epub-tr`) through a trusted publisher.
+* Per-segment model attribution in `--dump` (which OpenCode model translated what).
+* Optional human-review export (side-by-side HTML or DOCX) and re-import.
+* More target-language rule sets (German, Spanish, Arabic) next to the Turkish one.
 
 ## Contributing
 
-Issues and pull requests are welcome. Please:
-
-1. create a virtualenv and `pip install -e '.[dev]'`;
-2. keep changes focused and add/extend a test in `tests/` (the `echo` engine lets you test structure without network);
-3. run `python -m pytest -q` before opening a PR;
-4. if you touch the prompts, include a before/after sample (e.g. with `scripts/compare.py`).
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) (setup, checks, adding an
+engine) and the [Code of Conduct](CODE_OF_CONDUCT.md). Translation-quality reports have their own issue
+form. Report security problems privately: [SECURITY.md](SECURITY.md).
 
 ## License
 
