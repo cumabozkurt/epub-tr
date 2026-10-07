@@ -45,3 +45,4 @@ currently come from the wheel attached to the GitHub release or from `git+https:
 | version | date | release | workflow | assets |
 |---|---|---|---|---|
 | v1.0.0 | 2026-10-03 | [release](https://github.com/cumabozkurt/epub-tr/releases/tag/v1.0.0) | created manually with `gh release create` (before the workflow existed) | – |
+| v1.1.0 | 2026-10-08 | [release](https://github.com/cumabozkurt/epub-tr/releases/tag/v1.1.0) | [Release run 37689167063](https://github.com/cumabozkurt/epub-tr/actions/runs/37689167063) ✅ (test + build, publish) | `epub_tr-1.1.0-py3-none-any.whl`, `epub_tr-1.1.0.tar.gz`, `SHA256SUMS.txt` (verified with `sha256sum -c`) |

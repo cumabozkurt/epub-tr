@@ -47,3 +47,4 @@ adresinden yapılıyor.
 | sürüm | tarih | sürüm sayfası | iş akışı | dosyalar |
 |---|---|---|---|---|
 | v1.0.0 | 2026-10-03 | [sürüm](https://github.com/cumabozkurt/epub-tr/releases/tag/v1.0.0) | iş akışı yokken `gh release create` ile elle oluşturuldu | – |
+| v1.1.0 | 2026-10-08 | [sürüm](https://github.com/cumabozkurt/epub-tr/releases/tag/v1.1.0) | [Release çalıştırması 37689167063](https://github.com/cumabozkurt/epub-tr/actions/runs/37689167063) ✅ (test + derleme, yayım) | `epub_tr-1.1.0-py3-none-any.whl`, `epub_tr-1.1.0.tar.gz`, `SHA256SUMS.txt` (`sha256sum -c` ile doğrulandı) |
