@@ -1,0 +1,55 @@
+name: Bug report / Hata bildirimi
+description: Something does not work as expected / Bir şey beklendiği gibi çalışmıyor
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste API keys or copyrighted book content.** / **API anahtarı ya da telifli kitap metni yapıştırmayın.**
+        Security issues: see SECURITY.md / Güvenlik sorunları için SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: Version / Sürüm
+      description: "`epub-tr --version`"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS / İşletim sistemi
+      options: [Linux, macOS, Windows, Other / Diğer]
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version / Python sürümü
+      placeholder: "3.12.4"
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Engine / Motor
+      multiple: true
+      options: [opencode, ollama, google, bing, yandex, modernmt, mymemory, lingva, libretranslate, argos, openrouter, gemini, groq, mistral, openai, "n/a"]
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command / Komut
+      render: shell
+      placeholder: epub-tr translate book.epub -e opencode --fallback google -o book.tr.epub
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual / Beklenen ve gerçekleşen
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: JSON summary from stderr (or `--stats` file) / stderr'deki JSON özet
+      render: json

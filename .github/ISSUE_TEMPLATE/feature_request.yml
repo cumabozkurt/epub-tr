@@ -1,0 +1,21 @@
+name: Feature request / Özellik isteği
+description: Suggest an engine, option or improvement / Motor, seçenek ya da iyileştirme önerin
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Sorun
+      description: What are you trying to do? / Ne yapmaya çalışıyorsunuz?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal / Öneri
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives / Alternatifler

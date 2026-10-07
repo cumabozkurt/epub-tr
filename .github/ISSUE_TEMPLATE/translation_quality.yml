@@ -1,0 +1,31 @@
+name: Translation quality / Çeviri kalitesi
+description: A translation reads unnaturally, loses formatting or breaks names / Çeviri doğal değil, biçim ya da adlar bozuluyor
+labels: [quality]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Short excerpts only (public-domain books are ideal, e.g. Project Gutenberg). / Yalnızca kısa alıntılar (kamu malı kitaplar idealdir).
+  - type: input
+    id: engine
+    attributes:
+      label: Engine and model / Motor ve model
+      placeholder: "opencode / opencode/big-pickle, --polish"
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Source text / Kaynak metin
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: epub-tr output / epub-tr çıktısı
+    validations:
+      required: true
+  - type: textarea
+    id: better
+    attributes:
+      label: Better translation and why / Daha iyi çeviri ve gerekçesi
