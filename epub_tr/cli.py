@@ -9,7 +9,7 @@ import os
 import sys
 import time
 
-from . import __version__
+from . import __version__, textfix
 from .cache import Cache
 from .engines import ENGINES, make_engine
 from .engines.base import EngineUnavailable
@@ -50,7 +50,9 @@ def _load_glossary(path):
 
 
 def cmd_translate(a):
-    with Book(a.input, skip_gutenberg=not a.keep_boilerplate, translate_toc=not a.no_toc) as book:
+    with Book(a.input, skip_gutenberg=not a.keep_boilerplate, translate_toc=not a.no_toc,
+              translate_pre=not a.keep_pre, fix_words=not a.no_text_fixes,
+              strip_boilerplate=a.strip_boilerplate) as book:
         return _translate(a, book)
 
 
@@ -138,9 +140,16 @@ def _run(a, book, cache, content_docs, docs_segments, engines, polish_engine, sr
     if title:
         title = _re.sub(r"<[^>]+>", "", title)
     book.write(out, target_lang=a.target, title=title, bilingual=a.bilingual)
+    qa = None
+    if getattr(a, "qa", False) and not a.bilingual:
+        if not textfix.have_wordfreq():
+            print("[warn] --qa needs the optional 'wordfreq' package (pip install epub-tr[qa])", file=sys.stderr)
+        else:
+            qa = textfix.qa_epub(out, [e for e in engines if not e.is_llm] or engines, source=src, target=a.target)
     dt = time.time() - t0
     summary = {
-        "output": out, "seconds": round(dt, 1), "segments": total, "chars": chars,
+        "output": out, "qa": ({k: v for k, v in qa.items() if k != "left"} | {"left_sample": qa["left"][:20]}) if qa else None,
+        "seconds": round(dt, 1), "segments": total, "chars": chars,
         "translated": applied["applied"], "untranslated": applied["untranslated"],
         "selected_missing": sum(1 for d in docs_segments for s in d if not s.translation),
         "markup_fallbacks": applied["lenient"], "engine_segments": dict(stats.engine_segments),
@@ -240,6 +249,14 @@ def main(argv=None):
     t.add_argument("--translate-title", action="store_true", default=True)
     t.add_argument("--no-toc", action="store_true", help="do not translate TOC/nav labels")
     t.add_argument("--keep-boilerplate", action="store_true", help="also translate Project Gutenberg header/footer")
+    t.add_argument("--strip-boilerplate", action="store_true",
+                   help="remove Project Gutenberg header/footer/license from the output")
+    t.add_argument("--keep-pre", action="store_true",
+                   help="do not translate <pre> blocks (poems in <pre> are translated by default)")
+    t.add_argument("--no-text-fixes", action="store_true",
+                   help="disable stretched-word normalisation and re-joining of words broken across <br/>")
+    t.add_argument("--qa", action="store_true",
+                   help="after writing, retranslate text that still contains source-language words (needs wordfreq)")
     t.add_argument("--cache", help="sqlite cache path (default ~/.cache/epub-tr/cache.sqlite3)")
     t.add_argument("--no-cache", action="store_true")
     t.add_argument("--stats", help="write JSON stats here")

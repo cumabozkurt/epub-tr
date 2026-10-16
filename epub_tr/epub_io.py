@@ -19,6 +19,7 @@ import ebooklib
 from ebooklib import epub
 from lxml import etree
 
+from . import textfix
 from .blocks import Encoded, decode_into, encode, localname
 
 warnings.filterwarnings("ignore", category=UserWarning, module="ebooklib")
@@ -67,8 +68,12 @@ class Document:
 
 
 class Book:
-    def __init__(self, path: str, skip_gutenberg: bool = True, translate_toc: bool = True):
+    def __init__(self, path: str, skip_gutenberg: bool = True, translate_toc: bool = True,
+                 translate_pre: bool = True, fix_words: bool = True, strip_boilerplate: bool = False):
         self.path = path
+        self.translate_pre = translate_pre
+        self.fix_words = fix_words
+        self.strip_boilerplate = strip_boilerplate
         self.skip_gutenberg = skip_gutenberg
         self.translate_toc = translate_toc
         self.zip = zipfile.ZipFile(path)
@@ -137,6 +142,11 @@ class Book:
             props = getattr(it, "properties", []) or []
             is_nav = isinstance(it, epub.EpubNav) or "nav" in props
             doc = Document(index=idx, zip_path=zp, href=it.get_name(), tree=tree, is_nav=is_nav)
+            if not is_nav and (self.translate_pre or self.fix_words or self.strip_boilerplate):
+                lang = (self.language or "en").split("-")[0]
+                if textfix.preprocess_tree(tree, lang=lang, pre=self.translate_pre, words=self.fix_words,
+                                           boilerplate=self.strip_boilerplate):
+                    doc.modified = True
             if is_nav and not self.translate_toc:
                 pass
             else:

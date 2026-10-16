@@ -31,7 +31,8 @@ dependencies = ["ebooklib>=0.18", "lxml>=4.9", "beautifulsoup4>=4.12", "requests
 [project.optional-dependencies]
 argos = ["argostranslate>=1.9"]
 extra = ["translators>=5.9"]
-dev = ["pytest>=7", "pytest-cov>=4", "ruff>=0.6", "build>=1", "codespell>=2.3", "twine>=5"]
+qa = ["wordfreq>=3.0"]
+dev = ["wordfreq>=3.0", "pytest>=7", "pytest-cov>=4", "ruff>=0.6", "build>=1", "codespell>=2.3", "twine>=5"]
 
 [project.urls]
 Homepage = "https://github.com/cumabozkurt/epub-tr"
