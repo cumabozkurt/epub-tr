@@ -9,7 +9,7 @@ import os
 import sys
 import time
 
-from . import __version__, textfix
+from . import __version__, quality, textfix
 from .cache import Cache
 from .engines import ENGINES, make_engine
 from .engines.base import EngineUnavailable
@@ -125,6 +125,22 @@ def _run(a, book, cache, content_docs, docs_segments, engines, polish_engine, sr
     stats = tr.run(docs_segments)
     if bar:
         bar.close()
+    quality_stats = None
+    if getattr(a, "quality", False):
+        mt = [e for e in engines if not e.is_llm]
+        if mt:
+            back = make_engine(mt[0].name, source=a.target, target=src)
+            changed = []
+            segs = [s for d in docs_segments for s in d]
+            quality_stats = quality.improve_segments(segs, mt, back, source=src, target=a.target,
+                                                     workers=a.workers or 4, log=changed)
+            if not engines[0].is_llm:      # keep the cache in sync so a re-run reproduces the fix
+                by_uid = {s.uid: s for s in segs}
+                for c in changed:
+                    s = by_uid[c["uid"]]
+                    cache.put(engines[0].name, "", "mt", src, a.target, s.source, s.translation)
+        else:
+            print("[warn] --quality needs at least one MT engine (google, bing, ...)", file=sys.stderr)
 
     title = None
     if a.translate_title and book.title:
@@ -145,10 +161,13 @@ def _run(a, book, cache, content_docs, docs_segments, engines, polish_engine, sr
         if not textfix.have_wordfreq():
             print("[warn] --qa needs the optional 'wordfreq' package (pip install epub-tr[qa])", file=sys.stderr)
         else:
-            qa = textfix.qa_epub(out, [e for e in engines if not e.is_llm] or engines, source=src, target=a.target)
+            src_text = " ".join(" ".join(d.tree.getroot().itertext()) for d in book.documents if not d.is_nav)
+            qa = textfix.qa_epub(out, [e for e in engines if not e.is_llm] or engines, source=src, target=a.target,
+                                 src_info=textfix.SourceInfo(src_text))
     dt = time.time() - t0
     summary = {
-        "output": out, "qa": ({k: v for k, v in qa.items() if k != "left"} | {"left_sample": qa["left"][:20]}) if qa else None,
+        "output": out, "quality": quality_stats,
+        "qa": ({k: v for k, v in qa.items() if k != "left"} | {"left_sample": qa["left"][:20]}) if qa else None,
         "seconds": round(dt, 1), "segments": total, "chars": chars,
         "translated": applied["applied"], "untranslated": applied["untranslated"],
         "selected_missing": sum(1 for d in docs_segments for s in d if not s.translation),
@@ -255,6 +274,9 @@ def main(argv=None):
                    help="do not translate <pre> blocks (poems in <pre> are translated by default)")
     t.add_argument("--no-text-fixes", action="store_true",
                    help="disable stretched-word normalisation and re-joining of words broken across <br/>")
+    t.add_argument("--quality", action="store_true",
+                   help="flag garbled MT output (length, repeats, language ratio, leftovers) and pick the best re-translation"
+                        " by back-translation score (MT engines only, needs wordfreq)")
     t.add_argument("--qa", action="store_true",
                    help="after writing, retranslate text that still contains source-language words (needs wordfreq)")
     t.add_argument("--cache", help="sqlite cache path (default ~/.cache/epub-tr/cache.sqlite3)")

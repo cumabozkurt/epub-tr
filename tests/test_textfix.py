@@ -123,3 +123,13 @@ def test_qa_handles_all_caps_phrase_with_suffix():
 def test_all_caps_names_are_not_leftovers():
     assert textfix.leftover_words("MELVILLE ve HAWTHORNE") == []
     assert textfix.leftover_words("İlk THE LANDING'i") == ["THE", "LANDING"]
+
+
+@needs_wf
+def test_capitalised_common_noun_vs_name():
+    info = textfix.SourceInfo("Alice's Right Foot, Esq., Hearthrug, near the Fender. said Alice. and Alice ran. "
+                              "Bill came, and Bill went, so Bill. Elsie, Lacie, and Tillie lived.")
+    assert info.maybe_common_noun("Hearthrug")          # hearth + rug
+    assert not info.maybe_common_noun("Alice") and not info.maybe_common_noun("Bill")
+    assert not info.maybe_common_noun("Tillie") and not info.maybe_common_noun("Elsie")
+    assert textfix.leftover_words("Ayağı, Hearthrug, yakınında", src_info=info) == ["Hearthrug"]

@@ -248,29 +248,59 @@ def is_source_word(tok: str, source="en", target="tr") -> bool:
     return s - t >= 0.8
 
 
+def _compound(w, lang="en"):
+    """hearthrug -> hearth + rug: both parts ordinary words."""
+    return any(zipf_frequency(w[:i], lang) >= 3.0 and zipf_frequency(w[i:], lang) >= 3.0 for i in range(4, len(w) - 2))
+
+
+class SourceInfo:
+    """Facts about the source text used to tell names (Alice, Bill) from capitalised common nouns (Hearthrug)."""
+
+    def __init__(self, text: str = ""):
+        import collections
+        self.all = set(re.findall(r"[A-Za-z]+", text))
+        self.lower = {w for w in self.all if w.islower()}
+        self.caps = collections.Counter(m.group(1) for m in re.finditer(r"(?<=[a-z,;] )([A-Z][a-z]{2,})\b", text))
+
+    def maybe_common_noun(self, tok: str, source="en", target="tr") -> bool:
+        if zipf_frequency is None or tok not in self.all or len(tok) < 4 or tok.isupper():
+            return False
+        lw = tok.lower()
+        if zipf_frequency(lw, target) >= 2.5:
+            return False
+        if lw in self.lower:
+            return True
+        return self.caps.get(tok, 0) <= 1 and (zipf_frequency(lw, source) >= 3.3 or _compound(lw, source))
+
+
 TOKEN = re.compile(r"[^\W\d_]+(?:['’][^\W\d_]+)?")
 
 
-def leftover_words(text: str, source="en", target="tr") -> list[str]:
+def leftover_words(text: str, source="en", target="tr", src_info: SourceInfo | None = None) -> list[str]:
     text = re.sub(r"https?://\S+|www\.\S+|\S+@\S+", "", text or "")
     out = []
     for t in TOKEN.findall(text):
         w = re.split(r"['’]", t.strip("'’"))[0]       # LANDING'i -> LANDING, 'fiddle -> fiddle
-        if w and is_source_word(w, source, target):
+        noun = bool(src_info and w[:1].isupper() and src_info.maybe_common_noun(w, source, target)) if w else False
+        if w and (is_source_word(w, source, target) or noun):
             out.append(w)
     return out
 
 
-def source_runs(text, source="en", target="tr"):
+def source_runs(text, source="en", target="tr", src_info: SourceInfo | None = None):
     """Spans of adjacent words that are source-language (or ALL-CAPS next to one): ``THE LANDING``."""
     runs, cur = [], []
 
     def good(m):
         w = m.group(0)
-        return is_source_word(w, source, target) or (w.isupper() and len(w) >= 2)
+        return src_word(w) or (w.isupper() and len(w) >= 2)
+
+    def src_word(w):
+        noun = bool(src_info and w[:1].isupper() and src_info.maybe_common_noun(w, source, target))
+        return is_source_word(w, source, target) or noun
 
     def close():
-        if cur and any(is_source_word(x.group(0), source, target) for x in cur):
+        if cur and any(src_word(x.group(0)) for x in cur):
             runs.append((cur[0].start(), cur[-1].end()))
 
     for m in re.finditer(r"[A-Za-z]+", text):
@@ -293,7 +323,7 @@ def _retranslate(text, engines):
             yield r.strip()
 
 
-def qa_tree(tree, engines, source="en", target="tr", log=None) -> dict:
+def qa_tree(tree, engines, source="en", target="tr", log=None, src_info: SourceInfo | None = None) -> dict:
     """Retranslate text nodes that still contain source-language words; word-level as last resort."""
     stats = {"nodes_checked": 0, "nodes_fixed": 0, "nodes_left": 0, "words_left": 0}
     root = tree.getroot() if hasattr(tree, "getroot") else tree
@@ -308,28 +338,31 @@ def qa_tree(tree, engines, source="en", target="tr", log=None) -> dict:
             if not s or not s.strip():
                 continue
             stats["nodes_checked"] += 1
-            bad = leftover_words(s, source, target)
+            bad = leftover_words(s, source, target, src_info)
             if not bad:
                 continue
             lead, trail = s[: len(s) - len(s.lstrip())], s[len(s.rstrip()):]
             cur = s
             for r in _retranslate(s.strip(), engines):
-                if len(leftover_words(r, source, target)) < len(leftover_words(cur, source, target)):
+                if len(leftover_words(r, source, target, src_info)) < len(leftover_words(cur, source, target, src_info)):
                     cur = lead + r + trail
-                if not leftover_words(cur, source, target):
+                if not leftover_words(cur, source, target, src_info):
                     break
-            for a, b in reversed(source_runs(cur, source, target)):
+            for a, b in reversed(source_runs(cur, source, target, src_info)):
                 phrase = cur[a:b]
                 caps = phrase.isupper()
                 for r in _retranslate(phrase.lower() if caps else phrase, engines):
                     if caps:
                         r = r.replace("i", "İ").upper() if target == "tr" else r.upper()
-                    fewer = len(leftover_words(r, source, target)) < len(leftover_words(phrase, source, target))
+                    elif phrase[:1].isupper() and r:
+                        r = ("İ" if target == "tr" and r[0] == "i" else r[0].upper()) + r[1:]
+                    lw = leftover_words
+                    fewer = len(lw(r, source, target, src_info)) < len(lw(phrase, source, target, src_info))
                     if r.lower() != phrase.lower() and fewer:
                         cur = cur[:a] + r.rstrip(".") + cur[b:]
                         break
             setattr(el, attr, cur)
-            left = leftover_words(cur, source, target)
+            left = leftover_words(cur, source, target, src_info)
             if left:
                 stats["nodes_left"] += 1
                 stats["words_left"] += len(left)
@@ -340,7 +373,7 @@ def qa_tree(tree, engines, source="en", target="tr", log=None) -> dict:
     return stats
 
 
-def qa_epub(path, engines, source="en", target="tr", skip=lambda name, raw: False) -> dict:
+def qa_epub(path, engines, source="en", target="tr", skip=lambda name, raw: False, src_info: SourceInfo | None = None) -> dict:
     """Run :func:`qa_tree` on every XHTML document of ``path`` (rewritten in place)."""
     total = {"nodes_checked": 0, "nodes_fixed": 0, "nodes_left": 0, "words_left": 0, "left": []}
     with zipfile.ZipFile(path) as z:
@@ -350,7 +383,7 @@ def qa_epub(path, engines, source="en", target="tr", skip=lambda name, raw: Fals
         if info.filename.endswith((".xhtml", ".html", ".htm")) and b"<nav" not in raw and not skip(info.filename, raw):
             tree = etree.fromstring(raw, etree.XMLParser(recover=True, huge_tree=True, resolve_entities=False))
             log = []
-            st = qa_tree(tree, engines, source, target, log)
+            st = qa_tree(tree, engines, source, target, log, src_info)
             for k in ("nodes_checked", "nodes_fixed", "nodes_left", "words_left"):
                 total[k] += st[k]
             total["left"] += [{"doc": info.filename, **x} for x in log]
