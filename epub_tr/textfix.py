@@ -237,7 +237,10 @@ def is_source_word(tok: str, source="en", target="tr") -> bool:
         return False
     if source == "en" and w in EN_FUNCTION:
         return True
-    if tok[0].isupper() and not (tok.isupper() and len(tok) >= 3):   # names, places (ALL-CAPS words are checked)
+    if tok.isupper() and len(tok) >= 3:        # ALL-CAPS headings: only clearly common source words (not names)
+        s, t = zipf_frequency(w, source), zipf_frequency(w, target)
+        return s >= 4.0 and s - t >= 1.5
+    if tok[0].isupper():                       # names, places
         return False
     s, t = zipf_frequency(w, source), zipf_frequency(w, target)
     if s < 3.2 or (t >= 3.8 and s - t < 1.5):

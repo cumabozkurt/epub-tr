@@ -117,3 +117,9 @@ def test_qa_handles_all_caps_phrase_with_suffix():
     t = doc("<p>İlk THE LANDING'i takın</p>")
     st = textfix.qa_tree(t, [CapsEngine()])
     assert st["nodes_left"] == 0 and "İNİŞ'i" in body_xml(t)
+
+
+@needs_wf
+def test_all_caps_names_are_not_leftovers():
+    assert textfix.leftover_words("MELVILLE ve HAWTHORNE") == []
+    assert textfix.leftover_words("İlk THE LANDING'i") == ["THE", "LANDING"]
