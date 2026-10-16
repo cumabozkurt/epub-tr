@@ -237,7 +237,7 @@ def is_source_word(tok: str, source="en", target="tr") -> bool:
         return False
     if source == "en" and w in EN_FUNCTION:
         return True
-    if tok[0].isupper():                 # names, places
+    if tok[0].isupper() and not (tok.isupper() and len(tok) >= 3):   # names, places (ALL-CAPS words are checked)
         return False
     s, t = zipf_frequency(w, source), zipf_frequency(w, target)
     if s < 3.2 or (t >= 3.8 and s - t < 1.5):
@@ -250,7 +250,34 @@ TOKEN = re.compile(r"[^\W\d_]+(?:['’][^\W\d_]+)?")
 
 def leftover_words(text: str, source="en", target="tr") -> list[str]:
     text = re.sub(r"https?://\S+|www\.\S+|\S+@\S+", "", text or "")
-    return [t for t in TOKEN.findall(text) if is_source_word(t, source, target)]
+    out = []
+    for t in TOKEN.findall(text):
+        w = re.split(r"['’]", t.strip("'’"))[0]       # LANDING'i -> LANDING, 'fiddle -> fiddle
+        if w and is_source_word(w, source, target):
+            out.append(w)
+    return out
+
+
+def source_runs(text, source="en", target="tr"):
+    """Spans of adjacent words that are source-language (or ALL-CAPS next to one): ``THE LANDING``."""
+    runs, cur = [], []
+
+    def good(m):
+        w = m.group(0)
+        return is_source_word(w, source, target) or (w.isupper() and len(w) >= 2)
+
+    def close():
+        if cur and any(is_source_word(x.group(0), source, target) for x in cur):
+            runs.append((cur[0].start(), cur[-1].end()))
+
+    for m in re.finditer(r"[A-Za-z]+", text):
+        if good(m) and (not cur or not text[cur[-1].end():m.start()].strip()):
+            cur.append(m)
+        else:
+            close()
+            cur = [m] if good(m) else []
+    close()
+    return runs
 
 
 def _retranslate(text, engines):
@@ -288,10 +315,15 @@ def qa_tree(tree, engines, source="en", target="tr", log=None) -> dict:
                     cur = lead + r + trail
                 if not leftover_words(cur, source, target):
                     break
-            for tok in dict.fromkeys(leftover_words(cur, source, target)):
-                for r in _retranslate(tok, engines):
-                    if r.lower() != tok.lower() and not leftover_words(r, source, target):
-                        cur = re.sub(r"\b" + re.escape(tok) + r"\b", r, cur)
+            for a, b in reversed(source_runs(cur, source, target)):
+                phrase = cur[a:b]
+                caps = phrase.isupper()
+                for r in _retranslate(phrase.lower() if caps else phrase, engines):
+                    if caps:
+                        r = r.replace("i", "İ").upper() if target == "tr" else r.upper()
+                    fewer = len(leftover_words(r, source, target)) < len(leftover_words(phrase, source, target))
+                    if r.lower() != phrase.lower() and fewer:
+                        cur = cur[:a] + r.rstrip(".") + cur[b:]
                         break
             setattr(el, attr, cur)
             left = leftover_words(cur, source, target)

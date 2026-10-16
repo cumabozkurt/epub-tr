@@ -103,3 +103,17 @@ def test_qa_retranslates_leftovers(tmp_path):
 @pytest.mark.parametrize("tok", ["depression—a", "tendency—what", "it—I"])
 def test_dash_between_words_untouched(tok):
     assert textfix.fix_stretched(tok) == tok
+
+
+class CapsEngine(Engine):
+    name = "caps"
+
+    def translate_batch(self, texts):
+        return [{"the landing": "iniş"}.get(t, t) for t in texts]
+
+
+@needs_wf
+def test_qa_handles_all_caps_phrase_with_suffix():
+    t = doc("<p>İlk THE LANDING'i takın</p>")
+    st = textfix.qa_tree(t, [CapsEngine()])
+    assert st["nodes_left"] == 0 and "İNİŞ'i" in body_xml(t)
