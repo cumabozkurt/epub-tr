@@ -250,7 +250,12 @@ def is_source_word(tok: str, source="en", target="tr") -> bool:
 
 def _compound(w, lang="en"):
     """hearthrug -> hearth + rug: both parts ordinary words."""
-    return any(zipf_frequency(w[:i], lang) >= 3.0 and zipf_frequency(w[i:], lang) >= 3.0 for i in range(4, len(w) - 2))
+    return any(zipf_frequency(w[:i], lang) >= 3.0 and zipf_frequency(w[i:], lang) >= 3.0 and w[i:] not in NAME_ENDINGS
+               for i in range(5, len(w) - 2))
+
+
+NAME_ENDINGS = {"and", "ish", "ing", "ton", "son", "ley", "ford", "land", "ville", "wood", "field", "man", "ham", "well",
+                "worth", "by", "dale", "more", "stone", "bury", "wick", "ell", "er", "ers", "ett", "ard", "ie", "ey"}
 
 
 class SourceInfo:
@@ -270,14 +275,14 @@ class SourceInfo:
             return False
         if lw in self.lower:
             return True
-        return self.caps.get(tok, 0) <= 1 and (zipf_frequency(lw, source) >= 3.3 or _compound(lw, source))
+        return self.caps.get(tok, 0) <= 1 and _compound(lw, source)
 
 
 TOKEN = re.compile(r"[^\W\d_]+(?:['’][^\W\d_]+)?")
 
 
 def leftover_words(text: str, source="en", target="tr", src_info: SourceInfo | None = None) -> list[str]:
-    text = re.sub(r"https?://\S+|www\.\S+|\S+@\S+", "", text or "")
+    text = re.sub(r"https?://\S+|www\.\S+|\S+@\S+|\b[\w-]+(?:\.[\w-]+)+\.[a-z]{2,}\b", "", text or "")
     out = []
     for t in TOKEN.findall(text):
         w = re.split(r"['’]", t.strip("'’"))[0]       # LANDING'i -> LANDING, 'fiddle -> fiddle
@@ -351,7 +356,8 @@ def qa_tree(tree, engines, source="en", target="tr", log=None, src_info: SourceI
             for a, b in reversed(source_runs(cur, source, target, src_info)):
                 phrase = cur[a:b]
                 caps = phrase.isupper()
-                for r in _retranslate(phrase.lower() if caps else phrase, engines):
+                lower_first = caps or phrase[:1].isupper()      # MT keeps capitalised words as names
+                for r in _retranslate(phrase.lower() if lower_first else phrase, engines):
                     if caps:
                         r = r.replace("i", "İ").upper() if target == "tr" else r.upper()
                     elif phrase[:1].isupper() and r:

@@ -133,3 +133,9 @@ def test_capitalised_common_noun_vs_name():
     assert not info.maybe_common_noun("Alice") and not info.maybe_common_noun("Bill")
     assert not info.maybe_common_noun("Tillie") and not info.maybe_common_noun("Elsie")
     assert textfix.leftover_words("Ayağı, Hearthrug, yakınında", src_info=info) == ["Hearthrug"]
+
+
+@needs_wf
+def test_hostnames_and_rare_names_are_not_leftovers():
+    info = textfix.SourceInfo("Signed by Myles Standish and John Howland. ftp.cs.toronto.edu has it.")
+    assert textfix.leftover_words("Mil Standish ve John Howland. ftp.cs.toronto.edu", src_info=info) == []
