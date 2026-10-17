@@ -155,6 +155,9 @@ def _run(a, book, cache, content_docs, docs_segments, engines, polish_engine, sr
     import re as _re
     if title:
         title = _re.sub(r"<[^>]+>", "", title)
+        if getattr(a, "short_title", False) and not a.bilingual:
+            from .titles import short_title
+            title = short_title(title, book.title or "", a.target)
     book.write(out, target_lang=a.target, title=title, bilingual=a.bilingual)
     qa = None
     if getattr(a, "qa", False) and not a.bilingual:
@@ -266,6 +269,8 @@ def main(argv=None):
     t.add_argument("--chapters", help="content documents to translate, 1-based, e.g. 1-3,5")
     t.add_argument("--limit", type=int, help="translate only the first N segments (testing)")
     t.add_argument("--translate-title", action="store_true", default=True)
+    t.add_argument("--short-title", action="store_true",
+                   help="metadata title = book name only (+ normalised volume), no subtitles/edition words")
     t.add_argument("--no-toc", action="store_true", help="do not translate TOC/nav labels")
     t.add_argument("--keep-boilerplate", action="store_true", help="also translate Project Gutenberg header/footer")
     t.add_argument("--strip-boilerplate", action="store_true",
