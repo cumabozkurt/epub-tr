@@ -68,7 +68,7 @@ CH1 = """<?xml version="1.0" encoding="UTF-8"?>
   <div class="box"><p>Inside a div.</p><p>Second in div.</p></div>
   <p class="notranslate">Do not translate me.</p>
   <p translate="no">Nor me.</p>
-  <pre>code block stays</pre>
+  <pre><code>code block stays</code></pre>
   <p>12345</p>
   <img src="pic.png" alt="a picture"/>
   <ul><li>First item</li><li>Second <b>item</b></li></ul>

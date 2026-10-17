@@ -8,6 +8,17 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- `epub_tr.textfix`: `<pre>` poems/prose are now translated (layout kept with `<br/>`, code-like blocks skipped;
+  `--keep-pre` restores the old behaviour), stretched words are normalised (`Beau—ootiful Soo—oop` → `Beautiful Soup`),
+  words broken across `<br/>` are re-joined (`two p<br/>ennyworth`); disable with `--no-text-fixes`.
+- `--strip-boilerplate`: removes the Project Gutenberg header, START/END markers and license from the output.
+- `--quality`: no-LLM check for garbled MT output (abnormal length ratio, repeated words, too few target-language
+  words, leftover source words); flagged segments are re-translated (whole segment, sentence by sentence, every MT
+  engine) and the candidate with the best back-translation score wins; the cache is updated so re-runs keep the fix.
+- `--qa` also catches capitalised common nouns copied from the source (`Hearthrug`) while leaving names (`Alice`, `Bill`) alone.
+- `--qa`: after writing, text nodes that still contain source-language words are retranslated (sentence, then word
+  level) and reported in the stats. Word heuristics need the optional `wordfreq` package (`pip install epub-tr[qa]`).
+
 - Project banner (`docs/images/banner.svg`, text outlined so it renders the same everywhere) at the top of
   both READMEs, a 1280×640 social preview (`docs/images/social-preview.png`) and `scripts/outline_banner.py`
   that builds both from `docs/images/banner.src.svg`.
