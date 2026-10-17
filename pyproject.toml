@@ -71,4 +71,4 @@ ignore = ["B904", "B905", "UP031"]
 [tool.codespell]
 # Turkish prose (README.tr.md, *.tr.md, prompts, translated samples) is not English
 skip = "./out,./samples,./.venv,./.git,*.epub,*.egg-info,*.tr.md,./build,./dist"
-ignore-words-list = "siz,sizin,sistem,paralel,blok,manger,bu"
+ignore-words-list = "siz,sizin,sistem,paralel,blok,manger,bu,beauti"
