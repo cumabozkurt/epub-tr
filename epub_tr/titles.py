@@ -46,7 +46,34 @@ def tidy(t: str) -> str:
     t = re.sub(r"\s+-\s+(?=-|$)|\s+-\s+-", " ", t)
     t = re.sub(r"\s+([,.;:!?])", r"\1", re.sub(r"\s+", " ", t)).strip(" ,;:-–—")
     t = re.sub(r"(?<![.!?])\.$", "", t).strip()
+    t = re.sub(r"\s+\([^()]*\)", "", t)              # no bracketed segments in the final name
+    if t.count("(") != t.count(")"):
+        t = re.sub(r"[()]", "", t)
+    t = _fix_l(t)
+    if len(t) > MAX_LEN:                                 # too long: cut at the first subtitle boundary
+        c = re.split(r"\s*[:;]\s*|\s+[—–-]\s+|,\s*(?:veya|ya da|yahut)\s+|(?<=[a-zçğıöşü]{3})\.\s+", t)[0]
+        if 12 <= len(c) < len(t):
+            t = c
+    t = t.strip(" ,;:-")
     return t + (" - " + ", ".join(vols) if vols else "")
+
+
+MAX_LEN = 70
+
+
+def _fix_l(t: str) -> str:
+    """OCR/MT typo: Turkish words starting 'l'+consonant are almost always 'İ' (lnsanca -> İnsanca)."""
+    try:
+        from wordfreq import zipf_frequency as z
+    except Exception:  # pragma: no cover - optional dependency
+        z = None
+
+    def f(m: re.Match) -> str:
+        w = m.group(0)
+        if z is None:
+            return "İ" + w[1:]
+        return "İ" + w[1:] if z("i" + w[1:].lower(), "tr") >= 2.5 and z(w.lower(), "tr") < 1.5 else w
+    return re.sub(r"\bl[bcçdfgğhjklmnprsştvyz][a-zçğıöşü]+", f, t)
 
 
 def _num(s: str) -> int | None:

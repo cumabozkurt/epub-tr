@@ -32,3 +32,14 @@ def test_tidy_brackets_editions_volumes():
     assert tidy("Artemus Ward'ın Tüm Eserleri - Kısım 3") == "Artemus Ward'ın Tüm Eserleri - Kısım 3"
     assert tidy("Hacker Baskını") == "Hacker Baskını"
     assert tidy("Don Kişot  -  Cilt 2, Kısım 3.") == "Don Kişot - Cilt 2, Kısım 3"
+
+
+def test_tidy_suffix_typo_length():
+    from epub_tr.titles import tidy
+    assert tidy("İnsanca, Pek lnsanca") == "İnsanca, Pek İnsanca"
+    assert tidy("Frankenstein (Shelley)") == "Frankenstein"
+    assert tidy("Arthur Schopenhauer'in Denemeleri (10739)") == "Arthur Schopenhauer'in Denemeleri"
+    assert tidy("Zeta(3)'ün Değeri") == "Zeta(3)'ün Değeri"
+    long = "Brig'in Hayatının Bir Taslağı. General Francis Marion ve Tugayının Tarihi Hakkında Uzun Bir Alt Başlık"
+    assert tidy(long) == "Brig'in Hayatının Bir Taslağı"
+    assert tidy("Kral Lear (Shakespeare) - Cilt 2") == "Kral Lear - Cilt 2"
