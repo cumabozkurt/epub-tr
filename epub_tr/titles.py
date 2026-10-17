@@ -19,6 +19,36 @@ _JUNK = {"tr": r"Tamamlandı|Tam Metin|Bir Roman|Roman|Resimli|Kısaltılmamış
 _VOL_TR = r"(?:Cilt|Kitap|Kısım|Bölüm|Cild|Volume|Vol\.?|Part|Book)\s+[\dIVXLC]+"
 
 
+_ORD = r"(?:Birinci|İkinci|Üçüncü|Dördüncü|Beşinci|Altıncı|Yedinci|Sekizinci|Dokuzuncu|Onuncu|Yirminci|Otuzuncu)"
+_CNT = r"(?:\d+|İki|Üç|Dört|Beş|Altı|Yedi|Sekiz|Dokuz|On|Yirmi|Otuz)(?:\s+(?:Bir|İki|Üç|Dört|Beş|Altı|Yedi|Sekiz|Dokuz))?"
+_DISAMB = r"kitap|roman|oyun|diyalog|film|şiir|öykü|hikâye|hikaye|novel|book|play|dialogue|novella"
+
+
+def tidy(t: str) -> str:
+    """Structural cleanup: brackets, edition words, total-volume counts, stray dashes; volume -> ' - Cilt N'."""
+    t = re.sub(r"\s+", " ", t or "").strip()
+    vols: list[str] = []
+
+    def _v(m: re.Match) -> str:
+        lab = "Cilt" if m.group(1).lower().startswith("vol") else m.group(1)
+        v = f"{lab} {m.group(2)}"
+        if v not in vols:
+            vols.append(v)
+        return " "
+    t = re.sub(r"[\s,\-–—]*\b(Cilt|Kitap|Kısım|Volume|Vol\.?)\s+(\d+)\b\.?", _v, t)
+    t = re.sub(r"\s*[\[(][^\[\]()]*?(?:Bask|Edition|Cilt|Vol)[^\[\]()]*[\])]?", "", t, flags=re.I)
+    t = re.sub(r"\s*\((?:" + _DISAMB + r")\)", "", t, flags=re.I)
+    t = re.sub(r",?\s*\b(?:" + _ORD + r"|On\s+" + _ORD + r"|" + _CNT + r")\s+Cilt(?:lik)?\b\.?(?:\s+Bir\s+Arada)?", " ", t)
+    t = re.sub(r"\b(?:Gözden\s+Geçirilmiş\s+|Yeni\s+|Resimli\s+|Cambridge\s+)?Baskı(?:sı)?\b(?!\w)", "", t)
+    t = re.sub(r"(?<!['’]\w\w)(?<!['’]\w\w\w)(?<!n[ıiuü]n)\s+(?:Bütün|Tüm|Komple|Toplu)\s+Eserler(?:i)?\s*$", "", t.strip(" ,.-"))
+    t = re.sub(r"\s*[\[(][^\[\]()]*$", "", t)
+    t = re.sub(r"[\[\]]|\(\s*\)", "", t)
+    t = re.sub(r"\s+-\s+(?=-|$)|\s+-\s+-", " ", t)
+    t = re.sub(r"\s+([,.;:!?])", r"\1", re.sub(r"\s+", " ", t)).strip(" ,;:-–—")
+    t = re.sub(r"(?<![.!?])\.$", "", t).strip()
+    return t + (" - " + ", ".join(vols) if vols else "")
+
+
 def _num(s: str) -> int | None:
     s = s.lower()
     if s.isdigit():
@@ -59,4 +89,4 @@ def short_title(translated: str, source: str = "", target: str = "tr") -> str:
     t = re.sub(r"\s*\([^)]*\)\s*$", "", t)
     t = _cut(t) or t
     v = volume(source, target) if source else None
-    return f"{t} - {v}" if v and t else t
+    return tidy(f"{t} - {v}" if v and t else t)
