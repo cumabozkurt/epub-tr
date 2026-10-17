@@ -6,28 +6,44 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-17
+
 ### Added
 
-- `epub_tr.textfix`: `<pre>` poems/prose are now translated (layout kept with `<br/>`, code-like blocks skipped;
-  `--keep-pre` restores the old behaviour), stretched words are normalised (`Beau—ootiful Soo—oop` → `Beautiful Soup`),
-  words broken across `<br/>` are re-joined (`two p<br/>ennyworth`); disable with `--no-text-fixes`.
+- **Poems in `<pre>` are now translated.** Line breaks are kept (`<br/>`); code-like blocks
+  (`<pre><code>`, programming text) are still skipped. Use `--keep-pre` for the old behaviour.
+- **Text fixes before translation:** stretched words are normalised (`Beau—ootiful Soo—oop` →
+  `Beautiful Soup`) and words broken across `<br/>` are re-joined (`two p<br/>ennyworth`).
+  Turn them off with `--no-text-fixes`.
 - `--strip-boilerplate`: removes the Project Gutenberg header, START/END markers and license from the output.
-- `--quality`: no-LLM check for garbled MT output (abnormal length ratio, repeated words, too few target-language
-  words, leftover source words); flagged segments are re-translated (whole segment, sentence by sentence, every MT
-  engine) and the candidate with the best back-translation score wins; the cache is updated so re-runs keep the fix.
-- `--qa` also catches capitalised common nouns copied from the source (`Hearthrug`) while leaving names (`Alice`, `Bill`) alone.
-- `--qa`: after writing, text nodes that still contain source-language words are retranslated (sentence, then word
-  level) and reported in the stats. Word heuristics need the optional `wordfreq` package (`pip install epub-tr[qa]`).
+- `--quality`: a check for garbled machine translation that needs no LLM. It flags segments with an
+  abnormal length ratio, repeated words, too few target-language words or leftover source words, then
+  re-translates them (whole segment, sentence by sentence, with every MT engine) and keeps the candidate
+  with the best back-translation score. The cache is updated, so a re-run keeps the fix.
+- `--qa`: after the EPUB is written, text that still contains source-language words is re-translated
+  (sentence level, then word level) and reported in the run stats. It also catches capitalised common
+  nouns copied from the source (`Hearthrug`) while leaving names (`Alice`, `Bill`) alone.
+- New optional extra `qa` (`pip install "epub-tr[qa]"`, installs `wordfreq`), needed by `--quality` and `--qa`.
+- epub-tr is on PyPI: `pip install epub-tr`. The README has a PyPI badge and `pip install` instructions.
+- Release workflow: a `pypi` job uploads the wheel and sdist with `twine` and verifies
+  `pip install epub-tr==X.Y.Z` when the `PYPI_API_TOKEN` secret is set; otherwise it is skipped with a
+  notice. Trusted publishing is documented as an alternative. Release notes now start with `pip install epub-tr==X.Y.Z`.
+- Bilingual (TR/EN) project website on GitHub Pages (`site/`, deployed by `.github/workflows/pages.yml`).
+- Project banner (`docs/images/banner.svg`) at the top of both READMEs, a 1280×640 social preview
+  image and `scripts/outline_banner.py`, which builds both from `docs/images/banner.src.svg`.
+- 147 offline tests (up from 120), including new suites for text fixes and the quality check.
 
-- Project banner (`docs/images/banner.svg`, text outlined so it renders the same everywhere) at the top of
-  both READMEs, a 1280×640 social preview (`docs/images/social-preview.png`) and `scripts/outline_banner.py`
-  that builds both from `docs/images/banner.src.svg`.
-- Release workflow: a `pypi` job uploads the wheel and sdist to PyPI with `twine` and verifies
-  `pip install epub-tr==X.Y.Z` when the `PYPI_API_TOKEN` secret is set; otherwise it is skipped with a notice.
-  Trusted publishing is documented as the alternative.
-- epub-tr is on PyPI: `pip install epub-tr`. Version 1.1.0 was uploaded from the exact GitHub release files
-  (SHA-256 verified). The README has a PyPI badge and `pip install` instructions, and release notes now
-  start with `pip install epub-tr==X.Y.Z`.
+### Changed
+
+- `<pre>` blocks are translated by default (see above). If you relied on them staying in the source
+  language, pass `--keep-pre`.
+
+### Fixed
+
+- `--qa` no longer reports ALL-CAPS names or host names as leftovers; it checks ALL-CAPS words, splits
+  Turkish suffixes after an apostrophe and re-translates whole source-language runs instead of single words.
+- Stricter compound-word test for capitalised nouns; capitalised runs are lower-cased before re-translation.
+- CI lint: codespell no longer flags the stretched-word test fixture (`beauti—FUL`).
 
 ## [1.1.0] - 2026-10-08
 
@@ -95,6 +111,7 @@ All notable changes to this project are documented here. The format follows
 - TOC harmonisation and re-wrapping of single-element segments. Gutenberg boilerplate is skipped by default.
 - Test report on two Project Gutenberg books (EPUBCheck: no new errors) and a survey of 15 open-source translators.
 
-[Unreleased]: https://github.com/cumabozkurt/epub-tr/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/cumabozkurt/epub-tr/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/cumabozkurt/epub-tr/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/cumabozkurt/epub-tr/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/cumabozkurt/epub-tr/releases/tag/v1.0.0

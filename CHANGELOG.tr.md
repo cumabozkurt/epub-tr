@@ -6,17 +6,46 @@ English: [CHANGELOG.md](CHANGELOG.md).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-17
+
 ### Eklendi
 
-- Proje afişi (`docs/images/banner.svg`; metinler eğriye çevrildiği için her yerde aynı görünür) iki
-  README'nin en üstünde, 1280×640 sosyal önizleme görseli (`docs/images/social-preview.png`) ve ikisini de
-  `docs/images/banner.src.svg` kaynağından üreten `scripts/outline_banner.py`.
-- Sürüm iş akışı: `PYPI_API_TOKEN` sırrı tanımlıysa `pypi` işi wheel ve sdist dosyalarını `twine` ile PyPI'a
-  yükler ve `pip install epub-tr==X.Y.Z` ile doğrular; sır yoksa bir bildirimle atlanır. Güvenilir yayıncı
-  (trusted publishing) alternatif olarak belgelendi.
-- epub-tr artık PyPI'da: `pip install epub-tr`. 1.1.0 sürümü GitHub sürümündeki dosyaların aynısından
-  yüklendi (SHA-256 doğrulandı). README'de PyPI rozeti ve `pip install` talimatı var; sürüm notları artık
-  `pip install epub-tr==X.Y.Z` ile başlıyor.
+- **`<pre>` içindeki şiirler artık çevriliyor.** Satır sonları (`<br/>`) korunuyor; kod gibi görünen
+  bloklar (`<pre><code>`, programlama metni) yine atlanıyor. Eski davranış için `--keep-pre`.
+- **Çeviriden önce metin düzeltmeleri:** uzatılmış kelimeler düzeltiliyor (`Beau—ootiful Soo—oop` →
+  `Beautiful Soup`), `<br/>` ile bölünmüş kelimeler birleştiriliyor (`two p<br/>ennyworth`).
+  Kapatmak için `--no-text-fixes`.
+- `--strip-boilerplate`: Project Gutenberg başlığını, START/END işaretlerini ve lisans metnini çıktıdan siler.
+- `--quality`: bozuk makine çevirisini LLM gerektirmeden yakalar. Uzunluk oranı anormal, kelime
+  tekrarı olan, hedef dilde çok az kelime içeren ya da kaynak dilde kelime bırakan bölümleri işaretler;
+  bunları yeniden çevirir (bölümün tamamı, cümle cümle, her MT motoruyla) ve geri çeviri puanı en iyi
+  olan adayı seçer. Önbellek de güncellenir, yeniden çalıştırınca düzeltme korunur.
+- `--qa`: EPUB yazıldıktan sonra hâlâ kaynak dilde kelime içeren metinler yeniden çevrilir (önce cümle,
+  sonra kelime düzeyinde) ve çalışma istatistiklerinde raporlanır. Kaynaktan aynen kopyalanmış büyük
+  harfli cins isimleri de (`Hearthrug`) yakalar, özel isimlere (`Alice`, `Bill`) dokunmaz.
+- Yeni isteğe bağlı `qa` eki (`pip install "epub-tr[qa]"`, `wordfreq` kurar); `--quality` ve `--qa` için gerekli.
+- epub-tr artık PyPI'da: `pip install epub-tr`. README'de PyPI rozeti ve `pip install` talimatı var.
+- Sürüm iş akışı: `PYPI_API_TOKEN` sırrı tanımlıysa `pypi` işi wheel ve sdist dosyalarını `twine` ile
+  yükler ve `pip install epub-tr==X.Y.Z` ile doğrular; sır yoksa bir bildirimle atlanır. Güvenilir
+  yayıncı (trusted publishing) alternatif olarak belgelendi. Sürüm notları artık `pip install epub-tr==X.Y.Z` ile başlıyor.
+- GitHub Pages'te iki dilli (TR/EN) proje sitesi (`site/`, `.github/workflows/pages.yml` ile yayımlanıyor).
+- İki README'nin en üstünde proje afişi (`docs/images/banner.svg`), 1280×640 sosyal önizleme görseli ve
+  ikisini `docs/images/banner.src.svg` kaynağından üreten `scripts/outline_banner.py`.
+- 147 çevrimdışı test (önceden 120); metin düzeltmeleri ve kalite denetimi için yeni test takımları var.
+
+### Değişti
+
+- `<pre>` blokları artık varsayılan olarak çevriliyor (yukarıya bakın). Kaynak dilde kalmalarını
+  istiyorsanız `--keep-pre` kullanın.
+
+### Düzeltildi
+
+- `--qa` artık tamamı büyük harfli isimleri ve alan adlarını artık kelime olarak raporlamıyor; tamamı
+  büyük harfli kelimeleri denetliyor, kesme işaretinden sonraki Türkçe ekleri ayırıyor ve tek tek
+  kelimeler yerine kaynak dildeki kelime dizisini bütün olarak yeniden çeviriyor.
+- Büyük harfli isimler için daha sıkı birleşik kelime denetimi; büyük harfli diziler yeniden
+  çevrilmeden önce küçük harfe çevriliyor.
+- CI yazım denetimi: codespell artık uzatılmış kelime test örneğini (`beauti—FUL`) hata saymıyor.
 
 ## [1.1.0] - 2026-10-08
 
@@ -91,6 +120,7 @@ English: [CHANGELOG.md](CHANGELOG.md).
   varsayılan olarak atlanır.
 - İki Project Gutenberg kitabı üzerinde test raporu (EPUBCheck: yeni hata yok) ve 15 açık kaynak çevirmenin incelemesi.
 
-[Unreleased]: https://github.com/cumabozkurt/epub-tr/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/cumabozkurt/epub-tr/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/cumabozkurt/epub-tr/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/cumabozkurt/epub-tr/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/cumabozkurt/epub-tr/releases/tag/v1.0.0
