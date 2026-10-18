@@ -272,7 +272,12 @@ class Book:
             if d.modified:
                 if bilingual:
                     _inject_bilingual_css(d.tree)
-                replacements[d.zip_path] = etree.tostring(d.tree, xml_declaration=True, encoding="utf-8")
+                b = etree.tostring(d.tree, xml_declaration=True, encoding="utf-8")
+                if target_lang == "tr" and not bilingual:
+                    # MT repairs: roman numerals (BEN. -> I.), leaked page markers, inner title page
+                    from . import postfix
+                    b = postfix.process(b, title=title, first=d is self.documents[0])[0]
+                replacements[d.zip_path] = b
         if self.ncx_tree is not None and any(s.translation for s in self.ncx_segments):
             replacements[self.ncx_path] = etree.tostring(self.ncx_tree, xml_declaration=True, encoding="utf-8")
         replacements[self.opf_path] = self._patched_opf(target_lang, title, bilingual)

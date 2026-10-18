@@ -54,8 +54,24 @@ def tidy(t: str) -> str:
         c = re.split(r"\s*[:;]\s*|\s+[—–-]\s+|,\s*(?:veya|ya da|yahut)\s+|(?<=[a-zçğıöşü]{3})\.\s+", t)[0]
         if 12 <= len(c) < len(t):
             t = c
-    t = t.strip(" ,;:-")
+    t = title_case(t.strip(" ,;:-"))
     return t + (" - " + ", ".join(vols) if vols else "")
+
+
+# every word capitalised except Turkish conjunctions and foreign name particles ("Güç istenci" -> "Güç İstenci")
+_SMALL = {"ve", "ile", "ya", "da", "de", "ki", "mi", "mı", "mu", "mü", "veya", "yahut", "ama", "fakat", "ise", "hem",
+          "ne", "o'", "of", "the", "and", "van", "von", "der", "den", "di", "du", "la", "le", "les", "des", "del",
+          "della", "el", "al", "bin", "ibn", "y", "e", "dei", "zu", "op", "ten", "ter", "het"}
+
+
+def title_case(t: str) -> str:
+    out = []
+    for i, w in enumerate(t.split(" ")):
+        core = w.lstrip("\"'“‘(")
+        if core and core[0].islower() and (i == 0 or (core.lower() not in _SMALL and not re.match(r"^[dl]['’]", core))):
+            w = w[:len(w) - len(core)] + ("İ" if core[0] == "i" else core[0].upper()) + core[1:]
+        out.append(w)
+    return " ".join(out)
 
 
 MAX_LEN = 70
