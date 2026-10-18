@@ -80,7 +80,9 @@ def test_write_monolingual(tmp_path, epub_path):
     assert "DELLA COUNTED THE COINS <i>THREE</i> TIMES.<br/>IT WAS ALL SHE HAD." in ch1
     assert 'id="r1"' in ch1 and 'href="#fn1"' in ch1 and 'lang="tr"' in ch1
     assert "Do not translate me." in ch1 and "code block stays" in ch1 and "The Project Gutenberg" in ch1
-    assert "CHAPTER ONE" in zout.read("OEBPS/toc.ncx").decode()
+    ncx = zout.read("OEBPS/toc.ncx").decode()
+    # the first heading became the inner title page (postfix); TOC labels follow the translated body headings
+    assert "<text>SAATÇİ</text>" in ncx and "<docTitle><text>Saatçi</text>" in ncx and "CHAPTER TWO" in ncx
     assert "CHAPTER TWO" in zout.read("OEBPS/nav.xhtml").decode()
     with Book(str(out)) as b2:  # the output is a readable EPUB again
         assert b2.language == "tr" and b2.title == "Saatçi"

@@ -158,7 +158,9 @@ def _run(a, book, cache, content_docs, docs_segments, engines, polish_engine, sr
         if getattr(a, "short_title", False) and not a.bilingual:
             from .titles import short_title
             title = short_title(title, book.title or "", a.target)
-    book.write(out, target_lang=a.target, title=title, bilingual=a.bilingual)
+    names = {x.strip() for x in (getattr(a, "keep_names", None) or "").split(",") if x.strip()}
+    forms = dict(x.split("=", 1) for x in (getattr(a, "name_forms", None) or "").split(",") if "=" in x)
+    book.write(out, target_lang=a.target, title=title, bilingual=a.bilingual, names=names, forms=forms)
     qa = None
     if getattr(a, "qa", False) and not a.bilingual:
         if not textfix.have_wordfreq():
@@ -262,6 +264,10 @@ def main(argv=None):
     t.add_argument("--polish-model")
     t.add_argument("--dialogue", choices=["quotes", "dash"], default="quotes", help="Turkish dialogue style")
     t.add_argument("--glossary", help="glossary file (TSV, 'a => b' lines or JSON)")
+    t.add_argument("--keep-names", help="comma-separated person names (e.g. from title/author) kept untranslated; "
+                                        "MT exonyms such as Abraham -> İbrahim are put back")
+    t.add_argument("--name-forms", help="comma-separated translated=original pairs for surnames that are ordinary "
+                                        "words, e.g. Gri=Grey (fixed only after a kept name or honorific)")
     t.add_argument("-w", "--workers", type=int, help="parallel workers (chapters for LLMs, batches for MT)")
     t.add_argument("--chunk-chars", type=int, default=2500, help="source chars per LLM request")
     t.add_argument("--context", type=int, default=3, help="previous paragraphs passed as context to the LLM")

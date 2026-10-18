@@ -266,7 +266,8 @@ class Book:
                     root.set(XML_LANG, target_lang)
         return stats
 
-    def write(self, out_path: str, target_lang: str = "tr", title: str | None = None, bilingual: bool = False):
+    def write(self, out_path: str, target_lang: str = "tr", title: str | None = None, bilingual: bool = False,
+              names=None, forms=None):
         replacements: dict[str, bytes] = {}
         for d in self.documents:
             if d.modified:
@@ -281,6 +282,15 @@ class Book:
         if self.ncx_tree is not None and any(s.translation for s in self.ncx_segments):
             replacements[self.ncx_path] = etree.tostring(self.ncx_tree, xml_declaration=True, encoding="utf-8")
         replacements[self.opf_path] = self._patched_opf(target_lang, title, bilingual)
+        if target_lang == "tr" and not bilingual:
+            # Turkish package metadata (<title> tags, nav/ncx docTitle, English TOC labels) + kept person names
+            from . import postfix
+            exts = (".xhtml", ".html", ".htm", ".ncx", ".opf", "container.xml")
+            files = {n: replacements.get(n) or self.zip.read(n) for n in self.zip.namelist() if n.endswith(exts)}
+            first = self.documents[0].zip_path if self.documents else None
+            out, _ = postfix.meta_fix(files, title, names, forms, first)
+            # only documents that were translated in this run (partial runs leave the rest byte-identical)
+            replacements.update({k: v for k, v in out.items() if k in replacements})
 
         with zipfile.ZipFile(out_path, "w") as out:
             names = self.zip.namelist()
