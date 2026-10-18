@@ -43,3 +43,9 @@ def test_tidy_suffix_typo_length():
     long = "Brig'in Hayatının Bir Taslağı. General Francis Marion ve Tugayının Tarihi Hakkında Uzun Bir Alt Başlık"
     assert tidy(long) == "Brig'in Hayatının Bir Taslağı"
     assert tidy("Kral Lear (Shakespeare) - Cilt 2") == "Kral Lear - Cilt 2"
+
+
+def test_tidy_turkish_letters():
+    from epub_tr.titles import tidy
+    assert tidy("Jeláléddín Díván'ından Bahar Şenliği") == "Jelaleddin Divan'ından Bahar Şenliği"
+    assert tidy("Âşık Ömer ve Bouvard ile Pécuchet") == "Âşık Ömer ve Bouvard ile Pecuchet"

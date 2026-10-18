@@ -49,7 +49,7 @@ def tidy(t: str) -> str:
     t = re.sub(r"\s+\([^()]*\)", "", t)              # no bracketed segments in the final name
     if t.count("(") != t.count(")"):
         t = re.sub(r"[()]", "", t)
-    t = _fix_l(t)
+    t = _fix_l(turkish_letters(t))
     if len(t) > MAX_LEN:                                 # too long: cut at the first subtitle boundary
         c = re.split(r"\s*[:;]\s*|\s+[—–-]\s+|,\s*(?:veya|ya da|yahut)\s+|(?<=[a-zçğıöşü]{3})\.\s+", t)[0]
         if 12 <= len(c) < len(t):
@@ -117,3 +117,22 @@ def short_title(translated: str, source: str = "", target: str = "tr") -> str:
     t = _cut(t) or t
     v = volume(source, target) if source else None
     return tidy(f"{t} - {v}" if v and t else t)
+
+
+_KEEP = set("çğıöşüâîûÇĞİÖŞÜÂÎÛ")
+_SPEC = {"ß": "ss", "æ": "ae", "Æ": "Ae", "œ": "oe", "Œ": "Oe", "ø": "ö", "Ø": "Ö", "ł": "l", "Ł": "L"}
+
+
+def turkish_letters(t: str) -> str:
+    """Keep only Turkish letters: 'Jeláléddín Díván' -> 'Jelaleddin Divan' (â î û are kept)."""
+    import unicodedata
+    out = []
+    for ch in t:
+        if ch in _KEEP or ord(ch) < 128:
+            out.append(ch)
+        elif ch in _SPEC:
+            out.append(_SPEC[ch])
+        else:
+            b = unicodedata.normalize("NFD", ch)
+            out.append(b[0] if b[0].isalpha() and ord(b[0]) < 128 else ch)
+    return "".join(out)
