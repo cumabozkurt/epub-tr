@@ -106,3 +106,11 @@ def test_meta_fix_keeps_turkish_labels_and_colophon_titles():
     assert "kunye.xhtml" not in out
     n = out["toc.xhtml"].decode()
     assert "BİRİNCİ BÖLÜM İbrahim'in Çocukluğu" in n and st["labels"] == 1   # only the stale "Önsöz" entry
+
+
+def test_meta_fix_keeps_richer_stale_label():
+    nav = NAV.replace("Chapter One", 'I. BÖLÜM "Her Yerde Kahramanlık Var"')
+    files = {"content.opf": OPF.encode(), "toc.xhtml": nav.encode(), "c0.xhtml": C0.encode(),
+             "c1.xhtml": C1.replace("BİRİNCİ BÖLÜM<br/>İbrahim'in Çocukluğu", "BÖLÜM I").encode()}
+    out, st = P.meta_fix(files, "Kitap", None, None, None)
+    assert 'I. BÖLÜM "Her Yerde Kahramanlık Var"' in out["toc.xhtml"].decode()

@@ -496,7 +496,9 @@ def meta_fix(files, title, names=None, forms=None, first=None):
         if not en and not stale:
             return lab2 if lab2 != label else None
         hd = _heading_for(t, frag)
-        if hd and len(hd) <= 250 and (en or (len(hd) >= 4 and not re.fullmatch(r"[IVXLCDM\d\W]+", hd))):
+        # stale Turkish labels are only replaced by a heading that is not much shorter (keeps label subtitles)
+        if hd and len(hd) <= 250 and (en or (len(hd) >= 4 and len(hd) >= 0.6 * len(lab2)
+                                             and not re.fullmatch(r"[IVXLCDM\d\W]+", hd))):
             return hd if hd != label else None
         if en:
             st["labels_en_left"] += 1
