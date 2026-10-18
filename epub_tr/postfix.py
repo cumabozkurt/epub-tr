@@ -358,7 +358,7 @@ def meta_fix(files, title, names=None, forms=None, first=None):
     from lxml import etree
     P = etree.XMLParser(recover=True, huge_tree=True, resolve_entities=False)
     XHN = "http://www.w3.org/1999/xhtml"
-    st = {"titles": 0, "labels": 0, "labels_en_left": 0, "names": 0, "inner": 0, "meta": 0}
+    st = {"titles": 0, "labels": 0, "labels_en": 0, "labels_en_left": 0, "names": 0, "inner": 0, "meta": 0}
     out = {}
     trees = {}
 
@@ -499,6 +499,8 @@ def meta_fix(files, title, names=None, forms=None, first=None):
         # stale Turkish labels are only replaced by a heading that is not much shorter (keeps label subtitles)
         if hd and len(hd) <= 250 and (en or (len(hd) >= 4 and len(hd) >= 0.6 * len(lab2)
                                              and not re.fullmatch(r"[IVXLCDM\d\W]+", hd))):
+            if en and hd != label:
+                st["labels_en"] += 1
             return hd if hd != label else None
         if en:
             st["labels_en_left"] += 1
