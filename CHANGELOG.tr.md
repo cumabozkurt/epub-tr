@@ -6,6 +6,8 @@ English: [CHANGELOG.md](CHANGELOG.md).
 
 ## [Unreleased]
 
+- `epub_tr.leftovers`: çeviri sonrası kalan İngilizce dedektörü (küçük harfli İngilizce işlev sözcükleri; özel adlar/eser adları ve gülme sesleri sayılmaz) ve Gutenberg hazırlayıcı/aktarıcı notu temizliği, testleriyle.
+
 ### Eklendi
 
 - Proje afişi (`docs/images/banner.svg`; metinler eğriye çevrildiği için her yerde aynı görünür) iki

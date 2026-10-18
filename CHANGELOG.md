@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+- `epub_tr.leftovers`: leftover-English detector (lowercase English function words; names/citation titles and laughter ignored) and Gutenberg producer/transcriber note stripping, with tests.
+
 ### Added
 
 - `epub_tr.textfix`: `<pre>` poems/prose are now translated (layout kept with `<br/>`, code-like blocks skipped;
