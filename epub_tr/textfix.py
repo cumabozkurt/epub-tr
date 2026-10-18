@@ -252,7 +252,10 @@ def fix_replacement_chars(s: str | None) -> str | None:
 # Pre-1950 English: gay/gaily/gaiety mean cheerful; MT renders them as "eşcinsel". Map them to merry/... first.
 _OLD_GAY = {"gay": "merry", "gayer": "merrier", "gayest": "merriest", "gaily": "merrily", "gayly": "merrily",
             "gaiety": "merriment", "gayety": "merriment", "gaieties": "merriments", "gayeties": "merriments",
-            "gayness": "merriness"}
+            "gayness": "merriness",
+            # old-sense queer (odd, strange): MT says "eşcinsel" too
+            "queer": "strange", "queerer": "stranger", "queerest": "strangest", "queerly": "strangely",
+            "queerness": "strangeness"}
 _OLD_GAY_RE = re.compile(r"(?<![\w'’-])(" + "|".join(sorted(_OLD_GAY, key=len, reverse=True)) + r")(?!\w)", re.I)
 _SENT_START = re.compile(r"(?:^|[.!?:;]\s*[\"“‘'(\[—-]*\s*|^[\"“‘'(\[—-]+\s*)$")
 _ABBR = re.compile(r"\b(?:Mr|Mrs|Ms|Dr|St|Rev|Capt|Col|Gen|Sir|Lady|Lord|Miss|Madame|Mme|John|Delphine)\.?\s*$")
@@ -261,7 +264,7 @@ _ABBR = re.compile(r"\b(?:Mr|Mrs|Ms|Dr|St|Rev|Capt|Col|Gen|Sir|Lady|Lord|Miss|Ma
 def old_sense(s: str | None, at_start: bool = True) -> str | None:
     """gay -> merry etc. (case kept). A capitalised Gay mid-sentence is a surname (John Gay) and is kept;
     at a sentence start it is mapped. at_start: the string begins a block (text start = sentence start)."""
-    if not s or "ga" not in s.lower():
+    if not s or ("ga" not in s.lower() and "queer" not in s.lower()):
         return s
 
     def f(m):

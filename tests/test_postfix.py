@@ -143,3 +143,74 @@ def test_strip_pg_keeps_printer_and_drops_license():
     txt = "".join(t.itertext())
     assert "John Gutenberg" in txt and "Madde" not in txt and "Bağış" not in txt and "lisansı" not in txt
     assert not t.xpath("//*[local-name()='meta']")
+
+
+def test_strip_pg_keeps_blocks_that_only_link_to_gutenberg():
+    from lxml import etree
+
+    from epub_tr.postfix import strip_pg
+    x = ('<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Dizin</p>'
+         '<p>Abraham, <a href="https://www.gutenberg.org/files/1/1-h.htm#p12">12</a>, 40</p>'
+         '<p>Agnes, 7</p></body></html>')
+    t = etree.fromstring(x.encode())
+    assert strip_pg(t) == 0
+    assert "Abraham, 12, 40" in "".join(t.itertext()) and not t.xpath("//*[@href]")
+
+
+def _body(x):
+    from lxml import etree
+    return etree.fromstring(('<html xmlns="http://www.w3.org/1999/xhtml"><body>' + x + '</body></html>').encode())
+
+
+def test_strip_pg_cuts_only_the_pg_sentence_of_long_blocks():
+    from epub_tr.postfix import strip_pg
+    t = _body("<pre>" + "Uzun satır metni burada. " * 40 + "Projenin Sonu Gutenberg'in Krizi, Cilt 2, Winston Churchill\n</pre>"
+              "<p>Kapı açıldı. Projenin Sonu Gutenberg'in Anne Adayı, J. M. Barrie</p>"
+              "<p>Yaklaşık 1450'de Gutenberg'le başlayan baskı.</p>")
+    assert strip_pg(t) == 2
+    txt = "".join(t.itertext())
+    assert txt.count("Uzun satır metni burada.") == 40 and "Kapı açıldı." in txt and "Barrie" not in txt
+    assert "Krizi" not in txt and "1450'de Gutenberg'le" in txt
+
+
+def test_strip_pg_mt_end_lines():
+    from epub_tr.postfix import strip_pg
+    t = _body("<p>Kitap bitti.</p><h5>SON</h5><p>Gutenberg'in Boy Çiftçiler adlı eserinin sonu, Will Adams</p>"
+              "<p>Mark Twain'in Gutenberg Çalışmalarının Tamamı</p><p>[1] Bu Gutenberg e-Metnindeki bölüm eksik.</p>"
+              "<p>Johann Wolfgang von Goethe'nin yazdığı Gutenberg Otobiyografisi Projesinin Sonu</p>"
+              "<p>John Gutenberg matbaayı buldu.</p>")
+    strip_pg(t)
+    txt = "".join(t.itertext())
+    assert "Kitap bitti." in txt and "John Gutenberg matbaayı buldu." in txt
+    assert txt.count("Gutenberg") == 1
+
+
+def test_meta_fix_drops_license_toc_entry_with_empty_sublist_and_titles_bare_the():
+    nav = NAV.replace("Old English Title", "THE").replace(
+        '<li><a href="c1.xhtml#ch2">Bölüm 2</a></li>',
+        '<li><a href="c1.xhtml#ch2">Bölüm 2</a></li><li><a href="c1.xhtml#lic">Tam Proje Gutenberg Lisansı</a><ol></ol></li>')
+    c0 = C0.replace("ESKİ BAŞLIK", "THE")
+    files = {"content.opf": OPF.encode(), "toc.xhtml": nav.encode(), "c0.xhtml": c0.encode(), "c1.xhtml": C1.encode()}
+    out, st = P.meta_fix(files, "Goethe'nin Otobiyografisi", None, None, None)
+    n = out["toc.xhtml"].decode()
+    assert "Lisans" not in n and st["toc_pg"] == 1
+    assert ">Goethe'nin Otobiyografisi</a>" in n and ">THE<" not in n
+
+
+def test_gayalign_uses_the_aligned_source(tmp_path):
+    import json
+
+    from epub_tr import gayalign as G
+    dump = tmp_path / "d.jsonl"
+    rows = [("They were gay and happy all the long day.", "Bütün gün boyunca eşcinsel ve mutluydular hep."),
+            ("“Is this Mr. Bloomer queer also?” she asked him.", "“Bu Bay Bloomer da eşcinsel mi?” diye sordu ona."),
+            ("He studied homosexual behaviour in old age.", "Yaşlılıkta eşcinsel davranışları inceledi uzun süre."),
+            ("And she was queer, they all said to me.", "Ve o eşcinseldi, hepsi bana söyledi yine.")]
+    dump.write_text("\n".join(json.dumps({"source": s, "translation": t}, ensure_ascii=False) for s, t in rows))
+    x = ('<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Bütün gün boyunca eşcinsel ve mutluydular hep.</p>'
+         '<p>“Bu Bay Bloomer da eşcinsel mi?” diye sordu ona.</p><p>Yaşlılıkta eşcinsel davranışları inceledi uzun süre.</p>'
+         '<p>Ve o şendi, hepsi bana söyledi yine.</p></body></html>')
+    out, st = G.fix_files({"c.xhtml": x.encode()}, str(dump), undo=True)
+    s = out["c.xhtml"].decode()
+    assert "boyunca neşeli ve" in s and "Bloomer da tuhaf mi" in s and "eşcinsel davranışları" in s
+    assert "Ve o tuhaftı," in s and st == {"gay": 1, "queer": 1, "undo": 1, "left": 1}

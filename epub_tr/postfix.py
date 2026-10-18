@@ -351,7 +351,13 @@ PG_RE = re.compile(
     r"Project\s+Gutenberg|Proje(?:si)?\s+Gutenberg|Gutenberg\s+Proje|Gutenberg[\s-]+tm\b|gutenberg\.(?:org|net)"
     r"|Gutenberg\s*#\s*\d|Gutenberg\S{0,4}\s+(?:e-?[Kk]itab?|e-?[Bb]ook|[Ee]-?[Tt]ext|[Ee]-?[Mm]etin|Lisans|License"
     r"|[Kk]oleksiyon|[Aa]rşiv|Edebi|Literary)|PG\s+(?:e-?[Kk]itap|e-?[Bb]ook)|Gutenberg['’]?(?:in|un|ın)\b.{0,150}Proje"
-    r"|Dağıtılmış\s+(?:Düzeltme|Redaksiyon|Prova)|Distributed\s+Proofread|pgdp\.net|promo\.net/pg|ibiblio\.org",
+    r"|Dağıtılmış\s+(?:Düzeltme|Redaksiyon|Prova)|Distributed\s+Proofread|pgdp\.net|promo\.net/pg|ibiblio\.org"
+    # "End of (the) Project Gutenberg('s) ..." as free MT renders it
+    r"|Proje(?:nin|sinin)\s+Sonu\s+Gutenberg|Gutenberg\S{0,4}(?:\s+[^\s.!?]+){0,12}?\s+Proje(?:si)?(?:nin)?\s+Sonu"
+    r"|\bSON\.?\s+Gutenberg['’](?:in|un|ın|s)\b|Gutenberg['’]s\s+(?:[^\s.!?]+\s+){0,12}?Proje"
+    r"|Projenin\s+Sonu\b[^.!?\n]{0,80}?Gutenberg['’](?:in|un|ın)\b"
+    r"|Gutenberg['’](?:in|un|ın)\b[^.!?\n]{0,200}?(?:adlı\s+(?:\S+\s+)?sonu|(?:eserinin|kitabının|romanının|eseri|kitabı)\s+sonu)"
+    r"|Gutenberg\s+(?:e-?[Mm]etn|[Çç]alışmalar|sitesi|numaras|web\s*sitesi)",
     re.I | re.S)
 _LIC_RE = re.compile(
     r"telif hakk|lisans|license|bağış|donation|vergi|e-?metin|etext|e-?kitap|ebook|metin dosya|small print|küçük yazı"
@@ -363,6 +369,34 @@ _BLOCKS = ("p", "li", "h1", "h2", "h3", "h4", "h5", "h6", "pre", "blockquote", "
 
 def _local(el):
     return el.tag.split("}")[-1] if isinstance(el.tag, str) else ""
+
+
+_PG_SENT = re.compile(r"[^.!?\n]*(?:" + PG_RE.pattern + r")[^.!?\n]*[.!?]?[ \t]*", re.I | re.S)
+# "End of Project Gutenberg's <title>, by <author>": runs to the end of the line (titles/initials have dots)
+_PG_END = re.compile(r"(?:\bSON\.?\s+)?(?:Proje(?:nin|sinin)\s+Sonu\s+Gutenberg|Projenin\s+Sonu\b[^.!?\n]{0,80}?Gutenberg['’]|\bSON\.?\s+Gutenberg['’](?:in|un|ın|s)\b"
+                     r"|Gutenberg['’]s\s+(?:[^\s.!?]+\s+){0,12}?Proje)[^\n]*", re.I)
+
+
+def _pg_cut(v):
+    v, a = _PG_END.subn("", v)
+    v, b = _PG_SENT.subn("", v)
+    return v, a + b
+
+
+def _cut_pg_sentences(el):
+    """drop the sentences mentioning Project Gutenberg from the text nodes of a long block; returns count"""
+    n = 0
+    for x in el.iter():
+        if not isinstance(x.tag, str) or _local(x) in ("script", "style"):
+            continue
+        for a in ("text", "tail") if x is not el else ("text",):
+            v = getattr(x, a)
+            if v and PG_RE.search(v):
+                v2, c = _pg_cut(v)
+                if c:
+                    setattr(x, a, v2)
+                    n += c
+    return n
 
 
 def strip_pg(t):
@@ -416,8 +450,19 @@ def strip_pg(t):
     # leaf blocks mentioning PG, then adjacent license/credit blocks
     leaves = [e for e in body.iter() if _local(e) in _BLOCKS
               and not any(_local(c) in _BLOCKS for c in e.iter() if c is not e)]
-    hit = [bool(PG_RE.search(_el_text(e) + " " + " ".join(a.get("href", "") for a in e.iter() if _local(a) == "a")))
-           for e in leaves]
+    # text only: a block that merely links to gutenberg.org (cross-volume index entries) is content, the link is
+    # dropped below
+    hit = [bool(PG_RE.search(_el_text(e))) for e in leaves]
+    # a long block (a <pre> holding the whole book, a long paragraph) is never dropped: only the PG sentence goes
+    for i, e in enumerate(leaves):
+        if not hit[i]:
+            continue
+        txt = _el_text(e)
+        rest = _pg_cut(txt)[0]
+        if len(txt) > 600 or (len(re.findall(r"\w{2,}", rest)) >= 2 and not _LIC_RE.search(rest)
+                              and not PG_RE.search(rest)):
+            hit[i] = False
+            n += _cut_pg_sentences(e)
     kill = set(i for i, h in enumerate(hit) if h)
     changed = True
     while changed:
@@ -659,6 +704,9 @@ def meta_fix(files, title, names=None, forms=None, first=None, pg=True, gay=Fals
         if not en and not stale:
             return lab2 if lab2 != label else None
         hd = _heading_for(t, frag)
+        if en and title and frag == "pgepubid00000" and (not hd or looks_english(hd)):
+            st["labels_en"] += 1   # the book's inner title page (label often a bare "THE")
+            return title
         # stale Turkish labels are only replaced by a heading that is not much shorter (keeps label subtitles)
         if hd and len(hd) <= 250 and (en or (len(hd) >= 4 and len(hd) >= 0.6 * len(lab2)
                                              and not re.fullmatch(r"[IVXLCDM\d\W]+", hd))):
@@ -689,7 +737,7 @@ def meta_fix(files, title, names=None, forms=None, first=None, pg=True, gay=Fals
             lab = _el_text(a)
             if pg and PG_RE.search(lab + " " + href):
                 li = a.getparent()
-                if li is not None and _local(li) == "li" and li.getparent() is not None and not li.findall(".//{*}ol"):
+                if li is not None and _local(li) == "li" and li.getparent() is not None and not li.findall(".//{*}ol/{*}li"):
                     li.getparent().remove(li)
                     st["toc_pg"] += 1
                     dirty.add(navp)

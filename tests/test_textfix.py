@@ -160,3 +160,8 @@ def test_mixed_language_paragraph_detected():
     assert {"my", "am", "I"} <= set(textfix.leftover_words(bad))
     ok = 'Sonra bir "I" harfini tanımlıyor ve "I-I-I" diye mırıldanıyor, ardından bir "M" harfi çiziyor.'
     assert textfix.mixed_words(ok) == []
+
+
+def test_old_sense_queer():
+    from epub_tr.textfix import old_sense
+    assert old_sense("A queer, gay old man; Queerly enough.") == "A strange, merry old man; Strangely enough."
