@@ -69,11 +69,13 @@ class Document:
 
 class Book:
     def __init__(self, path: str, skip_gutenberg: bool = True, translate_toc: bool = True,
-                 translate_pre: bool = True, fix_words: bool = True, strip_boilerplate: bool = False):
+                 translate_pre: bool = True, fix_words: bool = True, strip_boilerplate: bool = False,
+                 old_gay: bool = False):
         self.path = path
         self.translate_pre = translate_pre
         self.fix_words = fix_words
         self.strip_boilerplate = strip_boilerplate
+        self.old_gay = old_gay
         self.skip_gutenberg = skip_gutenberg
         self.translate_toc = translate_toc
         self.zip = zipfile.ZipFile(path)
@@ -145,7 +147,7 @@ class Book:
             if not is_nav and (self.translate_pre or self.fix_words or self.strip_boilerplate):
                 lang = (self.language or "en").split("-")[0]
                 if textfix.preprocess_tree(tree, lang=lang, pre=self.translate_pre, words=self.fix_words,
-                                           boilerplate=self.strip_boilerplate):
+                                           boilerplate=self.strip_boilerplate, old_gay=self.old_gay):
                     doc.modified = True
             if is_nav and not self.translate_toc:
                 pass
@@ -288,7 +290,7 @@ class Book:
             exts = (".xhtml", ".html", ".htm", ".ncx", ".opf", "container.xml")
             files = {n: replacements.get(n) or self.zip.read(n) for n in self.zip.namelist() if n.endswith(exts)}
             first = self.documents[0].zip_path if self.documents else None
-            out, _ = postfix.meta_fix(files, title, names, forms, first)
+            out, _ = postfix.meta_fix(files, title, names, forms, first, pg=self.strip_boilerplate)
             # only documents that were translated in this run (partial runs leave the rest byte-identical)
             replacements.update({k: v for k, v in out.items() if k in replacements})
 

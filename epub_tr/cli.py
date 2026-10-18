@@ -52,7 +52,7 @@ def _load_glossary(path):
 def cmd_translate(a):
     with Book(a.input, skip_gutenberg=not a.keep_boilerplate, translate_toc=not a.no_toc,
               translate_pre=not a.keep_pre, fix_words=not a.no_text_fixes,
-              strip_boilerplate=a.strip_boilerplate) as book:
+              strip_boilerplate=a.strip_boilerplate, old_gay=not a.modern_source and a.engine != "echo") as book:
         return _translate(a, book)
 
 
@@ -283,6 +283,8 @@ def main(argv=None):
                    help="remove Project Gutenberg header/footer/license from the output")
     t.add_argument("--keep-pre", action="store_true",
                    help="do not translate <pre> blocks (poems in <pre> are translated by default)")
+    t.add_argument("--modern-source", action="store_true",
+                   help="source written after ~1950: do not map old-sense gay/gaily/gaiety to merry/merrily/merriment")
     t.add_argument("--no-text-fixes", action="store_true",
                    help="disable stretched-word normalisation and re-joining of words broken across <br/>")
     t.add_argument("--quality", action="store_true",

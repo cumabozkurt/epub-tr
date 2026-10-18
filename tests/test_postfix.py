@@ -114,3 +114,32 @@ def test_meta_fix_keeps_richer_stale_label():
              "c1.xhtml": C1.replace("BİRİNCİ BÖLÜM<br/>İbrahim'in Çocukluğu", "BÖLÜM I").encode()}
     out, st = P.meta_fix(files, "Kitap", None, None, None)
     assert 'I. BÖLÜM "Her Yerde Kahramanlık Var"' in out["toc.xhtml"].decode()
+
+
+def test_fix_gay_tr_suffixes():
+    from epub_tr.postfix import fix_gay_tr
+    s, n = fix_gay_tr("Eşcinsel bir kış; eşcinselliği, eşcinseldi, eşcinselce güldü, EŞCİNSEL")
+    assert s == "Neşeli bir kış; şenliği, şendi, neşeyle güldü, NEŞELİ" and n == 5
+
+
+def test_old_sense_source_mapping():
+    from epub_tr.textfix import old_sense
+    assert old_sense("She was gay and gaily danced; the gaiety of John Gay.") == \
+        "She was merry and merrily danced; the merriment of John Gay."
+    assert old_sense("Gay was the night. Mr. Gay came.") == "Merry was the night. Mr. Gay came."
+
+
+def test_strip_pg_keeps_printer_and_drops_license():
+    from lxml import etree
+
+    from epub_tr.postfix import strip_pg
+    x = ('<html xmlns="http://www.w3.org/1999/xhtml"><head><meta name="DC.Publisher" content="Project Gutenberg"/>'
+         '</head><body><p>Bu, Mainz\'da doğan John Gutenberg\'di.</p>'
+         '<p>Bu e-kitap Gutenberg Projesi lisansı altında dağıtılır.</p><p>Bağış için www.example.org.</p>'
+         '<p>Başka bir <a href="https://www.gutenberg.org/ebooks/1">cilt</a> var.</p>'
+         '<h2>Tam Proje Gutenberg Lisansı</h2><p>Madde 1</p><p>Madde 2</p></body></html>')
+    t = etree.fromstring(x.encode())
+    strip_pg(t)
+    txt = "".join(t.itertext())
+    assert "John Gutenberg" in txt and "Madde" not in txt and "Bağış" not in txt and "lisansı" not in txt
+    assert not t.xpath("//*[local-name()='meta']")

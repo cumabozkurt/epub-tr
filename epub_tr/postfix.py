@@ -345,20 +345,170 @@ def _norm(s):
     return re.sub(r"[\W_]+", "", lower_tr(s or ""))
 
 
-def meta_fix(files, title, names=None, forms=None, first=None):
+
+# ---------------------------------------------------------------- Project Gutenberg text left in the body
+PG_RE = re.compile(
+    r"Project\s+Gutenberg|Proje(?:si)?\s+Gutenberg|Gutenberg\s+Proje|Gutenberg[\s-]+tm\b|gutenberg\.(?:org|net)"
+    r"|Gutenberg\s*#\s*\d|Gutenberg\S{0,4}\s+(?:e-?[Kk]itab?|e-?[Bb]ook|[Ee]-?[Tt]ext|[Ee]-?[Mm]etin|Lisans|License"
+    r"|[Kk]oleksiyon|[Aa]rşiv|Edebi|Literary)|PG\s+(?:e-?[Kk]itap|e-?[Bb]ook)|Gutenberg['’]?(?:in|un|ın)\b.{0,150}Proje"
+    r"|Dağıtılmış\s+(?:Düzeltme|Redaksiyon|Prova)|Distributed\s+Proofread|pgdp\.net|promo\.net/pg|ibiblio\.org",
+    re.I | re.S)
+_LIC_RE = re.compile(
+    r"telif hakk|lisans|license|bağış|donation|vergi|e-?metin|etext|e-?kitap|ebook|metin dosya|small print|küçük yazı"
+    r"|garanti|warrant|sorumluluk|liabilit|ticari marka|trademark|hazırla|üretild|yapımcı|produced by|transcrib"
+    r"|tarafından düzelt|ftp|http|www\.|indir|download|posta|e-posta|copyright|hak sahib|dağıt", re.I)
+_BLOCKS = ("p", "li", "h1", "h2", "h3", "h4", "h5", "h6", "pre", "blockquote", "dt", "dd", "tr", "div", "table",
+           "section")
+
+
+def _local(el):
+    return el.tag.split("}")[-1] if isinstance(el.tag, str) else ""
+
+
+def strip_pg(t):
+    """remove Project Gutenberg license / credit / link text from an (x)html tree; returns removed block count.
+    The printer Johannes Gutenberg is not matched (only PG-specific phrases)."""
+    body = next((e for e in t.iter() if _local(e) == "body"), None)
+    n = 0
+    for m in list(t.iter()):
+        if _local(m) == "meta" and "gutenberg" in (m.get("content") or "").lower() and m.getparent() is not None:
+            m.getparent().remove(m)
+    if body is None:
+        return 0
+
+    def drop(el):
+        nonlocal n
+        p = el.getparent()
+        if p is None:
+            return
+        if el.tail and el.tail.strip():
+            prev = el.getprevious()
+            if prev is not None:
+                prev.tail = (prev.tail or "") + el.tail
+            else:
+                p.text = (p.text or "") + el.tail
+        p.remove(el)
+        n += 1
+    # whole license sections
+    for el in list(body.iter()):
+        if not isinstance(el.tag, str) or el.getparent() is None:
+            continue
+        key = ((el.get("id") or "") + " " + (el.get("class") or "")).lower()
+        if re.search(r"license|licence|boilerplate|pg-header|pg-footer", key):
+            drop(el)
+    # license headings: drop the heading and what follows it up to the next heading of the same/higher level
+    for h in list(body.iter()):
+        tag = _local(h)
+        if tag not in ("h1", "h2", "h3", "h4") or h.getparent() is None:
+            continue
+        txt = _el_text(h)
+        if PG_RE.search(txt) and re.search(r"lisans|license|small print|küçük yazı", txt, re.I):
+            lvl = int(tag[1])
+            sib = h.getnext()
+            drop(h)
+            while sib is not None:
+                st = _local(sib)
+                if st in ("h1", "h2", "h3", "h4") and int(st[1]) <= lvl:
+                    break
+                nxt = sib.getnext()
+                drop(sib)
+                sib = nxt
+    # leaf blocks mentioning PG, then adjacent license/credit blocks
+    leaves = [e for e in body.iter() if _local(e) in _BLOCKS
+              and not any(_local(c) in _BLOCKS for c in e.iter() if c is not e)]
+    hit = [bool(PG_RE.search(_el_text(e) + " " + " ".join(a.get("href", "") for a in e.iter() if _local(a) == "a")))
+           for e in leaves]
+    kill = set(i for i, h in enumerate(hit) if h)
+    changed = True
+    while changed:
+        changed = False
+        for i, e in enumerate(leaves):
+            if i in kill:
+                continue
+            if (i - 1 in kill or i + 1 in kill) and _LIC_RE.search(_el_text(e) or "") and len(_el_text(e)) < 600:
+                kill.add(i)
+                changed = True
+    for i in sorted(kill, reverse=True):
+        drop(leaves[i])
+    # remaining links to gutenberg.org: keep the text, drop the link
+    for a in list(body.iter()):
+        if _local(a) == "a" and re.search(r"gutenberg\.(?:org|net)", a.get("href") or "", re.I):
+            a.attrib.pop("href", None)
+    return n
+
+
+# ---------------------------------------------------------------- "gay" (cheerful) mistranslated as "eşcinsel"
+_GAY_TR = re.compile(r"(?<![A-Za-zÇĞİÖŞÜçğıöşüâîû])(eşcinsel|Eşcinsel|EŞCİNSEL)((?:lik|lık|LİK)?)([a-zçğıöşüA-ZÇĞİÖŞÜ]*)")
+
+
+def fix_gay_tr(s):
+    """Turkish text: eşcinsel (MT for old-sense 'gay') -> neşeli / şen (+ suffix), eşcinsellik -> şenlik,
+    eşcinselce -> neşeyle. Caller decides that the source really says gay/gaily/gaiety."""
+    if not s or "şcinsel" not in s and "ŞCİNSEL" not in s:
+        return s, 0
+    n = 0
+
+    def f(m):
+        nonlocal n
+        w, lik, suf = m.groups()
+        up = w.isupper()
+        cap = w[0].isupper() and not up
+        if lik:
+            out = "şenlik" + lower_tr(suf)
+        elif not suf:
+            out = "neşeli"
+        elif lower_tr(suf) in ("ce", "çe"):
+            out = "neşeyle"
+        else:
+            out = "şen" + lower_tr(suf)
+        n += 1
+        if up:
+            return upper_tr(out)
+        return (out[0].upper() + out[1:]) if cap else out
+    return _GAY_TR.sub(f, s), n
+
+
+def gay_tree(t):
+    n = 0
+    for el in t.iter():
+        if not isinstance(el.tag, str) or _local(el) in ("script", "style"):
+            continue
+        for a in ("text", "tail"):
+            v = getattr(el, a)
+            if v:
+                v2, c = fix_gay_tr(v)
+                if c:
+                    setattr(el, a, v2)
+                    n += c
+        for at in ("alt", "title"):
+            v = el.get(at)
+            if v:
+                v2, c = fix_gay_tr(v)
+                if c:
+                    el.set(at, v2)
+                    n += c
+    return n
+
+
+def meta_fix(files, title, names=None, forms=None, first=None, pg=True, gay=False, translate=None):
     """Package-level Turkish metadata. files: {zip path: bytes} of the EPUB (at least OPF, xhtml, ncx).
     - every xhtml <head><title> (except Künye/Kaynak) -> book title; html lang en -> tr; PG generator meta removed
     - nav document: <title>, docTitle-like headings, aria-label; ncx: docTitle, xml:lang
     - TOC labels (nav + ncx) still in English, or stale (text no longer in the body), -> the translated body heading
     - person names from title/author restored in body text and TOC (protect_names)
     - first: zip path of the first content doc; its inner title h1 (id pgepubid00000) -> title
+    - pg: Project Gutenberg license/credit/link text removed from content docs (and their TOC entries)
+    - gay: eşcinsel -> neşeli/şen (only when the caller knows the source has old-sense gay/gaily/gaiety)
+    - translate: callable(str)->str (free MT) for English TOC labels with no translated body heading
     returns ({path: new bytes} for changed files, stats)"""
     import os
 
     from lxml import etree
     P = etree.XMLParser(recover=True, huge_tree=True, resolve_entities=False)
     XHN = "http://www.w3.org/1999/xhtml"
-    st = {"titles": 0, "labels": 0, "labels_en": 0, "labels_en_left": 0, "names": 0, "inner": 0, "meta": 0}
+    st = {"titles": 0, "labels": 0, "labels_en": 0, "labels_en_left": 0, "names": 0, "inner": 0, "meta": 0,
+          "pg": 0, "gay": 0, "labels_mt": 0, "toc_pg": 0}
+    mt_cache = {}
     out = {}
     trees = {}
 
@@ -446,11 +596,24 @@ def meta_fix(files, title, names=None, forms=None, first=None):
                         h.text = title
                         st["titles"] += 1
                         ch = True
-        elif names or forms:
-            c = protect_tree(t, names, forms)
-            if c:
-                st["names"] += c
-                ch = True
+        else:
+            colophon = re.search(r"kunye|kaynak|colophon", p, re.I) or any(
+                (x.text or "").strip() in _HEAD_KEEP for x in t.iter(f"{{{XHN}}}title"))
+            if pg and not colophon:
+                c = strip_pg(t)
+                if c:
+                    st["pg"] += c
+                    ch = True
+            if gay:
+                c = gay_tree(t)
+                if c:
+                    st["gay"] += c
+                    ch = True
+            if names or forms:
+                c = protect_tree(t, names, forms)
+                if c:
+                    st["names"] += c
+                    ch = True
         if p == first and title:
             body = t.find(f"{{{XHN}}}body")
             h = None
@@ -502,6 +665,18 @@ def meta_fix(files, title, names=None, forms=None, first=None):
             if en and hd != label:
                 st["labels_en"] += 1
             return hd if hd != label else None
+        if en and translate:
+            if lab2 not in mt_cache:
+                try:
+                    mt_cache[lab2] = (translate(lab2) or "").strip()
+                except Exception:
+                    mt_cache[lab2] = ""
+            tr = mt_cache[lab2]
+            if tr and not looks_english(tr) and tr != lab2:
+                if names or forms:
+                    tr = protect_names(tr, names, forms)[0]
+                st["labels_mt"] += 1
+                return tr
         if en:
             st["labels_en_left"] += 1
         return lab2 if lab2 != label else None
@@ -512,6 +687,21 @@ def meta_fix(files, title, names=None, forms=None, first=None):
             if not href:
                 continue
             lab = _el_text(a)
+            if pg and PG_RE.search(lab + " " + href):
+                li = a.getparent()
+                if li is not None and _local(li) == "li" and li.getparent() is not None and not li.findall(".//{*}ol"):
+                    li.getparent().remove(li)
+                    st["toc_pg"] += 1
+                    dirty.add(navp)
+                    continue
+            if gay:
+                lab3, c = fix_gay_tr(lab)
+                if c:
+                    for c_ in list(a):
+                        a.remove(c_)
+                    a.text = lab = lab3
+                    st["labels"] += 1
+                    dirty.add(navp)
             nl = new_label(navp, href, lab)
             if nl:
                 for c in list(a):
@@ -533,11 +723,22 @@ def meta_fix(files, title, names=None, forms=None, first=None):
             dt.text = title
             st["titles"] += 1
             dirty.add(ncxp)
-        for np_ in t.iter("{*}navPoint"):
+        for np_ in list(t.iter("{*}navPoint")):
             tx = np_.find("{*}navLabel/{*}text")
             ct = np_.find("{*}content")
             if tx is None or ct is None or not ct.get("src"):
                 continue
+            if pg and PG_RE.search((tx.text or "") + " " + ct.get("src")) and np_.find("{*}navPoint") is None:
+                np_.getparent().remove(np_)
+                st["toc_pg"] += 1
+                dirty.add(ncxp)
+                continue
+            if gay:
+                lab3, c = fix_gay_tr(tx.text or "")
+                if c:
+                    tx.text = lab3
+                    st["labels"] += 1
+                    dirty.add(ncxp)
             nl = new_label(ncxp, ct.get("src"), tx.text or "")
             if nl:
                 tx.text = nl
@@ -548,7 +749,7 @@ def meta_fix(files, title, names=None, forms=None, first=None):
     return out, st
 
 
-def meta_fix_epub(src, dst, title, names=None, forms=None, first=None):
+def meta_fix_epub(src, dst, title, names=None, forms=None, first=None, **kw):
     """apply meta_fix to an EPUB file (src -> dst, may be the same path). returns stats or None if unchanged"""
     import os
     import zipfile
@@ -557,7 +758,7 @@ def meta_fix_epub(src, dst, title, names=None, forms=None, first=None):
     files = {n: z.read(n) for n in z.namelist() if n.endswith(exts)}
     if first is None:
         first = first_content_doc(files)
-    out, st = meta_fix(files, title, names, forms, first)
+    out, st = meta_fix(files, title, names, forms, first, **kw)
     if not out:
         return None
     tmp = dst + ".mf.tmp"

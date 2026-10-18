@@ -248,8 +248,54 @@ def fix_replacement_chars(s: str | None) -> str | None:
     return re.sub(r"[^\W\d_]*\ufffd[\ufffd\w]*", best, s).replace("\ufffd", "")
 
 
-def preprocess_tree(tree, lang="en", pre=True, words=True, boilerplate=False) -> bool:
-    """Apply the fixes in place. Returns True when the document changed."""
+# ---------------------------------------------------------------- old-sense "gay" (cheerful) before MT
+# Pre-1950 English: gay/gaily/gaiety mean cheerful; MT renders them as "eşcinsel". Map them to merry/... first.
+_OLD_GAY = {"gay": "merry", "gayer": "merrier", "gayest": "merriest", "gaily": "merrily", "gayly": "merrily",
+            "gaiety": "merriment", "gayety": "merriment", "gaieties": "merriments", "gayeties": "merriments",
+            "gayness": "merriness"}
+_OLD_GAY_RE = re.compile(r"(?<![\w'’-])(" + "|".join(sorted(_OLD_GAY, key=len, reverse=True)) + r")(?!\w)", re.I)
+_SENT_START = re.compile(r"(?:^|[.!?:;]\s*[\"“‘'(\[—-]*\s*|^[\"“‘'(\[—-]+\s*)$")
+_ABBR = re.compile(r"\b(?:Mr|Mrs|Ms|Dr|St|Rev|Capt|Col|Gen|Sir|Lady|Lord|Miss|Madame|Mme|John|Delphine)\.?\s*$")
+
+
+def old_sense(s: str | None, at_start: bool = True) -> str | None:
+    """gay -> merry etc. (case kept). A capitalised Gay mid-sentence is a surname (John Gay) and is kept;
+    at a sentence start it is mapped. at_start: the string begins a block (text start = sentence start)."""
+    if not s or "ga" not in s.lower():
+        return s
+
+    def f(m):
+        w = m.group(1)
+        new = _OLD_GAY[w.lower()]
+        if w.isupper() and len(w) > 1:
+            return new.upper()
+        if w[0].isupper():
+            before = s[:m.start()]
+            if _ABBR.search(before) or not (_SENT_START.search(before) if before.strip() else at_start):
+                return w
+            return new[0].upper() + new[1:]
+        return new
+    return _OLD_GAY_RE.sub(f, s)
+
+
+def old_sense_tree(body) -> int:
+    n = 0
+    for el in body.iter():
+        if not isinstance(el.tag, str) or el.tag.split("}")[-1] in ("script", "style"):
+            continue
+        for a in ("text", "tail"):
+            v = getattr(el, a)
+            if v:
+                v2 = old_sense(v, at_start=(a == "text"))
+                if v2 != v:
+                    setattr(el, a, v2)
+                    n += 1
+    return n
+
+
+def preprocess_tree(tree, lang="en", pre=True, words=True, boilerplate=False, old_gay=True) -> bool:
+    """old_gay: map old-sense gay/gaily/gaiety to merry/... (English sources written before ~1950)."""
+    # Apply the fixes in place. Returns True when the document changed.
     root = tree.getroot() if hasattr(tree, "getroot") else tree
     body = root.find(_q("body"))
     if body is None:
@@ -262,6 +308,8 @@ def preprocess_tree(tree, lang="en", pre=True, words=True, boilerplate=False) ->
         if isinstance(el.tag, str):
             el.text = fix_replacement_chars(el.text)
             el.tail = fix_replacement_chars(el.tail)
+    if old_gay and lang == "en":
+        old_sense_tree(body)
     if pre:
         convert_pre(body)
     if words and zipf_frequency is not None and lang in WORD_FIX_LANGS:
