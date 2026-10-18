@@ -191,6 +191,63 @@ def strip_boilerplate(body) -> int:
     return n
 
 
+def _is_small_caps(el) -> bool:
+    if not isinstance(el.tag, str):
+        return False
+    tag, cls, sty = _local(el.tag), (el.get("class") or "").lower(), (el.get("style") or "").lower()
+    return tag == "small" or (tag == "span" and ("smcap" in cls or "small-cap" in cls or "smallcap" in cls
+                                                   or cls.split() == ["sc"] or "small-caps" in sty))
+
+
+def merge_small_caps(body) -> int:
+    """``M<small>RS</small>`` / ``Q<span class="smcap">UIRKE</span>`` -> ``Mrs`` / ``Quirke`` as one plain word.
+
+    Engines otherwise translate the two halves separately and break names (``S<small>UIRKE</small>``).
+    Whole small-caps words without a leading capital outside the tag keep their markup."""
+    n = 0
+    for el in list(body.iter()):
+        if not _is_small_caps(el) or len(el) or not el.text:
+            continue
+        if not re.fullmatch(r"[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ’'.]*", el.text):
+            continue
+        prev, par = el.getprevious(), el.getparent()
+        if par is None:
+            continue
+        before = (prev.tail if prev is not None else par.text) or ""
+        m = re.search(r"(?:^|(?<=[\s(\[\"“‘'—–-]))([A-ZÀ-ÖØ-Þ])$", before)
+        if not m:
+            continue
+        merged = before[:m.start(1)] + m.group(1) + el.text.lower() + (el.tail or "")
+        if prev is not None:
+            prev.tail = merged
+        else:
+            par.text = merged
+        par.remove(el)
+        n += 1
+    return n
+
+
+_FFFD_CANDIDATES = "àâäéèêëîïôöùûüçñáíóúßæœ"
+
+
+def fix_replacement_chars(s: str | None) -> str | None:
+    """Repair U+FFFD left in the source (``for\ufffdt`` -> ``forêt``, ``\ufffd la`` -> ``à la``) from word
+    frequencies; anything that cannot be repaired is dropped so no U+FFFD reaches the output."""
+    if not s or "\ufffd" not in s:
+        return s
+
+    def best(m):
+        w = m.group(0)
+        if zipf_frequency is None:
+            return w.replace("\ufffd", "")
+        score, cand = max((max(zipf_frequency(w.replace("\ufffd", c, 1).lower(), lang)
+                               for lang in ("fr", "en", "de", "es", "it", "pt")), w.replace("\ufffd", c, 1))
+                          for c in _FFFD_CANDIDATES)
+        return fix_replacement_chars(cand) if score >= 1.0 else w.replace("\ufffd", "", 1)
+
+    return re.sub(r"[^\W\d_]*\ufffd[\ufffd\w]*", best, s).replace("\ufffd", "")
+
+
 def preprocess_tree(tree, lang="en", pre=True, words=True, boilerplate=False) -> bool:
     """Apply the fixes in place. Returns True when the document changed."""
     root = tree.getroot() if hasattr(tree, "getroot") else tree
@@ -200,6 +257,11 @@ def preprocess_tree(tree, lang="en", pre=True, words=True, boilerplate=False) ->
     before = etree.tostring(body)
     if boilerplate:
         strip_boilerplate(body)
+    merge_small_caps(body)
+    for el in body.iter():
+        if isinstance(el.tag, str):
+            el.text = fix_replacement_chars(el.text)
+            el.tail = fix_replacement_chars(el.tail)
     if pre:
         convert_pre(body)
     if words and zipf_frequency is not None and lang in WORD_FIX_LANGS:
@@ -281,7 +343,36 @@ class SourceInfo:
 TOKEN = re.compile(r"[^\W\d_]+(?:['’][^\W\d_]+)?")
 
 
+# Half-translated paragraphs ("O my eş is a iyice domesticated kadın"): short function words are skipped
+# word by word (too short / target-language homographs: is, not, it), so the paragraph is judged as a whole.
+MIX_STRONG = {"en": {"my", "am", "are", "the", "of", "and", "to", "if", "we", "was", "were", "you", "his", "with", "that",
+                     "this", "for", "have", "has", "would", "should", "could", "they", "their", "which", "what", "when",
+                     "been", "will", "from", "our", "your", "but", "or", "by", "me", "him", "she", "per"}}
+MIX_WEAK = {"en": {"is", "not", "it", "an", "at"}}
+
+
+def mixed_words(text: str, source="en", target="tr") -> list[str]:
+    """Source function words of a paragraph that is still partly in the source language (else [])."""
+    strong, weak = MIX_STRONG.get(source), MIX_WEAK.get(source, set())
+    if not strong or source == target:
+        return []
+    w = re.findall(r"[^\W\d_]+", text or "")
+    if len(w) < 6:
+        return []
+    st = [x for x in w if x.lower() in strong and not (x.isupper() and len(x) > 1)]
+    if source == "en":
+        st += [m.group(0) for m in re.finditer(r"(?<![\w\"'‘“\-—])I(?=\s+[a-z])", text)]
+    wk = [x for x in w if x.lower() in weak and not x.isupper()]
+    n = len(st) + 0.5 * len(wk)
+    return st + wk if n >= 3 and n / len(w) >= 0.06 else []
+
+
 def leftover_words(text: str, source="en", target="tr", src_info: SourceInfo | None = None) -> list[str]:
+    mixed = mixed_words(text, source, target)
+    return mixed + _leftover_words(text, source, target, src_info) if mixed else _leftover_words(text, source, target, src_info)
+
+
+def _leftover_words(text: str, source="en", target="tr", src_info: SourceInfo | None = None) -> list[str]:
     text = re.sub(r"https?://\S+|www\.\S+|\S+@\S+|\b[\w-]+(?:\.[\w-]+)+\.[a-z]{2,}\b", "", text or "")
     out = []
     for t in TOKEN.findall(text):

@@ -139,3 +139,24 @@ def test_capitalised_common_noun_vs_name():
 def test_hostnames_and_rare_names_are_not_leftovers():
     info = textfix.SourceInfo("Signed by Myles Standish and John Howland. ftp.cs.toronto.edu has it.")
     assert textfix.leftover_words("Mil Standish ve John Howland. ftp.cs.toronto.edu", src_info=info) == []
+
+
+def test_small_caps_merged_into_one_word():
+    t = doc('<p>Q<small>UIRKE</small>. M<small>RS</small> Smith, <small>AND</small> P<span class="smcap">OOR</span> man</p>')
+    textfix.preprocess_tree(t, words=False, pre=False)
+    assert body_xml(t).endswith('<p>Quirke. Mrs Smith, <small>AND</small> Poor man</p></body>')
+
+
+@needs_wf
+def test_replacement_chars_repaired():
+    s = textfix.fix_replacement_chars("Dans la for\ufffdt, Gloire \ufffd la, exc\ufffds, Quitt\ufffd")
+    assert s == "Dans la forêt, Gloire à la, excès, Quitté"
+    assert "\ufffd" not in textfix.fix_replacement_chars("x\ufffd\ufffdqzv \ufffd")
+
+
+@needs_wf
+def test_mixed_language_paragraph_detected():
+    bad = "Elbette şunu söylemeliyim ki, O my eş is a iyice domesticated kadın, Ve I am one erkeklerin en ılımlılarından."
+    assert {"my", "am", "I"} <= set(textfix.leftover_words(bad))
+    ok = 'Sonra bir "I" harfini tanımlıyor ve "I-I-I" diye mırıldanıyor, ardından bir "M" harfi çiziyor.'
+    assert textfix.mixed_words(ok) == []
