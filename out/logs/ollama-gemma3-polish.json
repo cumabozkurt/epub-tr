@@ -1,0 +1,30 @@
+{
+  "output": "out/magi.ollama-gemma3-polish.tr.epub",
+  "seconds": 719.7,
+  "segments": 51,
+  "chars": 11237,
+  "translated": 51,
+  "untranslated": 0,
+  "selected_missing": 0,
+  "markup_fallbacks": 2,
+  "engine_segments": {
+    "ollama": 51
+  },
+  "engine_calls": {
+    "ollama": 26
+  },
+  "failures": {},
+  "polished_segments": 50,
+  "cache_hits": 1,
+  "glossary_size": 7,
+  "errors": [],
+  "glossary": {
+    "Della": "Della",
+    "Dillingham": "Dillingham",
+    "GUTENBERG™ TAM METİN FİLMİ İZİN VERME SÜRESİ": "THE FULL PROJECT GUTENBERG™ LICENSE",
+    "Hediyenin Getirdiği Mutluluk": "The Gift of the Magi",
+    "Young": "Young",
+    "Jim": "Jim",
+    "Mme. Sofronie. Hair Goods of All Kinds.": "Mme. Sofronie. Hair Goods of All Kinds."
+  }
+}

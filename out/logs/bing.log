@@ -1,0 +1,23 @@
+Book: 'The Gift of the Magi' by O. Henry | 2 content docs | 51 segments, 11237 chars | engines: ['bing']
+WARNING Retrying (Retry(total=0, connect=None, read=False, redirect=None, status=None)) after connection broken by 'MustDowngradeError('The server yielded its support for HttpVersion.h3 through the Alt-Svc header while unable to do so. To remediate that issue, either disable HttpVersion.h3 or reach out to the server admin.')': /ttranslatev3?isVertical=1&&IG=6408EEE6629A46808BE7D4D89F38FA90&IID=translator.5026
+WARNING Retrying (Retry(total=0, connect=None, read=False, redirect=None, status=None)) after connection broken by 'MustDowngradeError('The server yielded its support for HttpVersion.h3 through the Alt-Svc header while unable to do so. To remediate that issue, either disable HttpVersion.h3 or reach out to the server admin.')': /ttranslatev3?isVertical=1&&IG=6408EEE6629A46808BE7D4D89F38FA90&IID=translator.5026
+{
+  "output": "out/magi.bing.tr.epub",
+  "seconds": 42.8,
+  "segments": 51,
+  "chars": 11237,
+  "translated": 51,
+  "untranslated": 0,
+  "markup_fallbacks": 0,
+  "engine_segments": {
+    "bing": 51
+  },
+  "engine_calls": {
+    "bing": 13
+  },
+  "failures": {},
+  "polished_segments": 0,
+  "cache_hits": 0,
+  "glossary_size": 0,
+  "errors": []
+}

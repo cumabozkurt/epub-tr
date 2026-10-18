@@ -1,0 +1,50 @@
+Book: 'The Gift of the Magi' by O. Henry | 2 content docs | 51 segments, 11237 chars | engines: ['lingva']
+WARNING engine lingva failed for 6 segments: lingva failed after 3 attempts: lingva: HTTP 500
+ERROR all engines failed for unit starting 1:1: lingva failed after 3 attempts: lingva: HTTP 500
+WARNING engine lingva failed for 3 segments: lingva failed after 3 attempts: lingva: HTTP 500
+ERROR all engines failed for unit starting 2:4: lingva failed after 3 attempts: lingva: HTTP 500
+WARNING engine lingva failed for 5 segments: lingva failed after 3 attempts: lingva: HTTP 500
+ERROR all engines failed for unit starting 2:7: lingva failed after 3 attempts: lingva: HTTP 500
+WARNING engine lingva failed for 8 segments: lingva failed after 3 attempts: lingva: HTTP 500
+ERROR all engines failed for unit starting 2:12: lingva failed after 3 attempts: lingva: HTTP 500
+WARNING engine lingva failed for 8 segments: lingva failed after 3 attempts: lingva: HTTP 500
+ERROR all engines failed for unit starting 2:25: lingva failed after 3 attempts: lingva: HTTP 500
+WARNING engine lingva failed for 5 segments: lingva failed after 3 attempts: lingva: HTTP 500
+ERROR all engines failed for unit starting 2:20: lingva failed after 3 attempts: lingva: HTTP 500
+WARNING engine lingva failed for 5 segments: lingva failed after 3 attempts: lingva: HTTP 500
+ERROR all engines failed for unit starting 2:33: lingva failed after 3 attempts: lingva: HTTP 500
+WARNING engine lingva failed for 6 segments: lingva failed after 3 attempts: lingva: HTTP 500
+ERROR all engines failed for unit starting 2:38: lingva failed after 3 attempts: lingva: HTTP 500
+WARNING engine lingva failed for 5 segments: lingva failed after 3 attempts: lingva: HTTP 500
+ERROR all engines failed for unit starting 2:44: lingva failed after 3 attempts: lingva: HTTP 500
+{
+  "output": "out/magi.lingva.tr.epub",
+  "seconds": 146.7,
+  "segments": 51,
+  "chars": 11237,
+  "translated": 0,
+  "untranslated": 51,
+  "markup_fallbacks": 0,
+  "engine_segments": {},
+  "engine_calls": {
+    "lingva": 27
+  },
+  "failures": {
+    "lingva": 36
+  },
+  "polished_segments": 0,
+  "cache_hits": 0,
+  "glossary_size": 0,
+  "errors": [
+    "lingva: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500",
+    "lingva: unit failed: lingva failed after 3 attempts: lingva: HTTP 500",
+    "lingva: unit failed: lingva failed after 3 attempts: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500"
+  ]
+}

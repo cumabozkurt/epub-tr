@@ -1,0 +1,32 @@
+{
+  "output": "out/magi.lingva.tr.epub",
+  "seconds": 146.7,
+  "segments": 51,
+  "chars": 11237,
+  "translated": 0,
+  "untranslated": 51,
+  "markup_fallbacks": 0,
+  "engine_segments": {},
+  "engine_calls": {
+    "lingva": 27
+  },
+  "failures": {
+    "lingva": 36
+  },
+  "polished_segments": 0,
+  "cache_hits": 0,
+  "glossary_size": 0,
+  "errors": [
+    "lingva: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500",
+    "lingva: unit failed: lingva failed after 3 attempts: lingva: HTTP 500",
+    "lingva: unit failed: lingva failed after 3 attempts: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500",
+    "lingva: lingva: HTTP 500"
+  ],
+  "glossary": {}
+}

@@ -1,0 +1,23 @@
+{
+  "output": "out/yellow-wallpaper.google.tr.epub",
+  "seconds": 3.8,
+  "segments": 273,
+  "chars": 31295,
+  "translated": 273,
+  "untranslated": 0,
+  "selected_missing": 0,
+  "markup_fallbacks": 0,
+  "engine_segments": {
+    "google (cache)": 2,
+    "google": 271
+  },
+  "engine_calls": {
+    "google": 11
+  },
+  "failures": {},
+  "polished_segments": 0,
+  "cache_hits": 2,
+  "glossary_size": 0,
+  "errors": [],
+  "glossary": {}
+}

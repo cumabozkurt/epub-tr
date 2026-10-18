@@ -1,0 +1,21 @@
+{
+  "output": "out/magi.google.tr.epub",
+  "seconds": 1.7,
+  "segments": 51,
+  "chars": 11237,
+  "translated": 51,
+  "untranslated": 0,
+  "markup_fallbacks": 0,
+  "engine_segments": {
+    "google": 51
+  },
+  "engine_calls": {
+    "google": 3
+  },
+  "failures": {},
+  "polished_segments": 0,
+  "cache_hits": 0,
+  "glossary_size": 0,
+  "errors": [],
+  "glossary": {}
+}
